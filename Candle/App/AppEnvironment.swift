@@ -1,7 +1,9 @@
 import Foundation
+import Observation
 import SwiftData
 
 @MainActor
+@Observable
 final class AppEnvironment {
     let container: ModelContainer
     let settings: AppSettings
