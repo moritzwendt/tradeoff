@@ -1,0 +1,14 @@
+.DS_Store
+*.icloud
+
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+.build/
+.swiftpm/
+
+Secrets.xcconfig
+
+.claude/
+internal/
