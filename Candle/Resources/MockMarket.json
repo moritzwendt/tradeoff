@@ -1,0 +1,121 @@
+{
+  "tick": {
+    "intervalSeconds": 1.0,
+    "volatilityMultiplier": 40
+  },
+  "instruments": [
+    {
+      "symbol": "AAPL",
+      "name": "Apple",
+      "assetClass": "stock",
+      "startPrice": 227.40,
+      "previousClose": 225.85,
+      "dailyVolatility": 0.014,
+      "dailyDrift": 0.0003,
+      "spreadBps": 2,
+      "seed": 11
+    },
+    {
+      "symbol": "NVDA",
+      "name": "NVIDIA",
+      "assetClass": "stock",
+      "startPrice": 138.20,
+      "previousClose": 140.10,
+      "dailyVolatility": 0.026,
+      "dailyDrift": 0.0006,
+      "spreadBps": 3,
+      "seed": 23
+    },
+    {
+      "symbol": "TSLA",
+      "name": "Tesla",
+      "assetClass": "stock",
+      "startPrice": 251.60,
+      "previousClose": 248.30,
+      "dailyVolatility": 0.032,
+      "dailyDrift": 0.0002,
+      "spreadBps": 4,
+      "seed": 37
+    },
+    {
+      "symbol": "VOO",
+      "name": "Vanguard S&P 500",
+      "assetClass": "etf",
+      "startPrice": 531.80,
+      "previousClose": 530.90,
+      "dailyVolatility": 0.008,
+      "dailyDrift": 0.0004,
+      "spreadBps": 1,
+      "seed": 41
+    },
+    {
+      "symbol": "BTC",
+      "name": "Bitcoin",
+      "assetClass": "crypto",
+      "startPrice": 68250.00,
+      "previousClose": 67410.00,
+      "dailyVolatility": 0.022,
+      "dailyDrift": 0.0005,
+      "spreadBps": 1.5,
+      "seed": 53
+    },
+    {
+      "symbol": "ETH",
+      "name": "Ethereum",
+      "assetClass": "crypto",
+      "startPrice": 2640.50,
+      "previousClose": 2688.10,
+      "dailyVolatility": 0.028,
+      "dailyDrift": 0.0002,
+      "spreadBps": 2,
+      "seed": 67
+    },
+    {
+      "symbol": "SOL",
+      "name": "Solana",
+      "assetClass": "crypto",
+      "startPrice": 162.35,
+      "previousClose": 158.90,
+      "dailyVolatility": 0.04,
+      "dailyDrift": 0.0004,
+      "spreadBps": 3,
+      "seed": 71
+    },
+    {
+      "symbol": "BONK",
+      "name": "Bonk",
+      "assetClass": "memeCoin",
+      "startPrice": 0.00002145,
+      "previousClose": 0.00002310,
+      "dailyVolatility": 0.075,
+      "dailyDrift": 0.0,
+      "spreadBps": 30,
+      "liquidityUSD": 1850000,
+      "seed": 79
+    },
+    {
+      "symbol": "PEPE",
+      "name": "Pepe",
+      "assetClass": "memeCoin",
+      "startPrice": 0.00001180,
+      "previousClose": 0.00001095,
+      "dailyVolatility": 0.065,
+      "dailyDrift": 0.0,
+      "spreadBps": 30,
+      "liquidityUSD": 9400000,
+      "seed": 83
+    },
+    {
+      "symbol": "MOONCAT",
+      "name": "Moon Cat",
+      "assetClass": "memeCoin",
+      "startPrice": 0.00391,
+      "previousClose": 0.00462,
+      "dailyVolatility": 0.12,
+      "dailyDrift": -0.002,
+      "spreadBps": 60,
+      "liquidityUSD": 62000,
+      "seed": 97
+    }
+  ]
+}
