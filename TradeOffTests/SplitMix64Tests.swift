@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import Candle
+@testable import TradeOff
 
 struct SplitMix64Tests {
     @Test func sameSeedProducesSameSequence() {

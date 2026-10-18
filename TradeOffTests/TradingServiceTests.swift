@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 import Testing
-@testable import Candle
+@testable import TradeOff
 
 @MainActor
 struct TradingServiceTests {
@@ -15,7 +15,7 @@ struct TradingServiceTests {
 
     private func harness(startingBalance: Decimal = 10_000) throws -> Harness {
         let container = try PersistenceController.makeContainer(inMemory: true)
-        let defaults = UserDefaults(suiteName: "candle.tests.\(UUID().uuidString)") ?? .standard
+        let defaults = UserDefaults(suiteName: "tradeoff.tests.\(UUID().uuidString)") ?? .standard
         let settings = AppSettings(defaults: defaults)
         settings.values.startingBalance = startingBalance
         let mock = try MockPriceProvider.bundled()

@@ -51,7 +51,7 @@ final class AppEnvironment {
     func prepare() async {
         _ = trading.account()
         await applyMockTuning()
-        let key = "candle.watchlist.seeded"
+        let key = "tradeoff.watchlist.seeded"
         guard !defaults.bool(forKey: key) else { return }
         let context = container.mainContext
         let catalog = await hub.catalog()

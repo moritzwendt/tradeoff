@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import Candle
+@testable import TradeOff
 
 struct ExecutionModelTests {
     private let stock = TestSupport.instrument("AAPL")

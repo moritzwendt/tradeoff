@@ -10,7 +10,7 @@ build/
 .swiftpm/
 
 Secrets.xcconfig
-Candle/Info.plist
+TradeOff/Info.plist
 
 .claude/
 internal/

@@ -1,5 +1,5 @@
 import Foundation
-@testable import Candle
+@testable import TradeOff
 
 extension TestSupport {
     static func model(

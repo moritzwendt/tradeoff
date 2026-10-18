@@ -1,13 +1,13 @@
 import Foundation
 import SwiftData
 import Testing
-@testable import Candle
+@testable import TradeOff
 
 @MainActor
 struct DemoSeederTests {
     @Test func seedingBuildsAConsistentPortfolio() async throws {
         let container = try PersistenceController.makeContainer(inMemory: true)
-        let defaults = UserDefaults(suiteName: "candle.tests.\(UUID().uuidString)") ?? .standard
+        let defaults = UserDefaults(suiteName: "tradeoff.tests.\(UUID().uuidString)") ?? .standard
         let settings = AppSettings(defaults: defaults)
         let hub = QuoteHub(registry: ProviderRegistry([try MockPriceProvider.bundled()]))
         let context = container.mainContext
@@ -32,7 +32,7 @@ struct DemoSeederTests {
 
     @Test func seedingTwiceDoesNotDuplicate() async throws {
         let container = try PersistenceController.makeContainer(inMemory: true)
-        let defaults = UserDefaults(suiteName: "candle.tests.\(UUID().uuidString)") ?? .standard
+        let defaults = UserDefaults(suiteName: "tradeoff.tests.\(UUID().uuidString)") ?? .standard
         let settings = AppSettings(defaults: defaults)
         let hub = QuoteHub(registry: ProviderRegistry([try MockPriceProvider.bundled()]))
         let context = container.mainContext

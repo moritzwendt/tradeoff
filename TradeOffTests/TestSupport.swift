@@ -1,5 +1,5 @@
 import Foundation
-@testable import Candle
+@testable import TradeOff
 
 enum TestSupport {
     static func decimal(_ text: String) -> Decimal {

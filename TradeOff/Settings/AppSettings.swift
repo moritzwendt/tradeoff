@@ -6,7 +6,7 @@ import Observation
 final class AppSettings {
     @ObservationIgnored private var storage: SettingsValues
     @ObservationIgnored private let defaults: UserDefaults
-    @ObservationIgnored private let key = "candle.settings.v1"
+    @ObservationIgnored private let key = "tradeoff.settings.v1"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults

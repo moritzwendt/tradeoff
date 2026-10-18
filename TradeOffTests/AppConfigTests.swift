@@ -1,5 +1,5 @@
 import Testing
-@testable import Candle
+@testable import TradeOff
 
 struct AppConfigTests {
     @Test func rejectsMissingValues() {

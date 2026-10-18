@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import Candle
+@testable import TradeOff
 
 struct PortfolioValuatorTests {
     private let apple = TestSupport.instrument("AAPL")

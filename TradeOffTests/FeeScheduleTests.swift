@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import Candle
+@testable import TradeOff
 
 struct FeeScheduleTests {
     private let fees = FeeSchedule.standard

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import Candle
+@testable import TradeOff
 
 struct PriceSeriesGeneratorTests {
     private func definition(_ symbol: String = "AAPL") throws -> MockInstrumentDefinition {

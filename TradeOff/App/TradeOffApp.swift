@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 @main
-struct CandleApp: App {
+struct TradeOffApp: App {
     @State private var environment = AppEnvironment.live()
 
     var body: some Scene {

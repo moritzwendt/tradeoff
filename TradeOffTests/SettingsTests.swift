@@ -1,11 +1,11 @@
 import Foundation
 import Testing
-@testable import Candle
+@testable import TradeOff
 
 @MainActor
 struct SettingsTests {
     private func defaults() -> UserDefaults {
-        UserDefaults(suiteName: "candle.tests.\(UUID().uuidString)") ?? .standard
+        UserDefaults(suiteName: "tradeoff.tests.\(UUID().uuidString)") ?? .standard
     }
 
     @Test func valuesRoundTripThroughJSON() throws {

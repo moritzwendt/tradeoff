@@ -1,4 +1,4 @@
-name: Candle
+name: TradeOff
 options:
   developmentLanguage: de
   createIntermediateGroups: true
@@ -15,15 +15,15 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
 targets:
-  Candle:
+  TradeOff:
     type: application
     platform: iOS
     sources:
-      - path: Candle
+      - path: TradeOff
     info:
-      path: Candle/Info.plist
+      path: TradeOff/Info.plist
       properties:
-        CFBundleDisplayName: Candle
+        CFBundleDisplayName: TradeOff
         UILaunchScreen: {}
         UIUserInterfaceStyle: Dark
         UISupportedInterfaceOrientations:
@@ -36,29 +36,29 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
-  CandleTests:
+  TradeOffTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: CandleTests
+      - path: TradeOffTests
     dependencies:
-      - target: Candle
+      - target: TradeOff
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).tests
 schemes:
-  Candle:
+  TradeOff:
     build:
       targets:
-        Candle: all
-        CandleTests: [test]
+        TradeOff: all
+        TradeOffTests: [test]
     run:
       config: Debug
     test:
       config: Debug
       targets:
-        - CandleTests
+        - TradeOffTests
     profile:
       config: Release
     archive:

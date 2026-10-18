@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import Candle
+@testable import TradeOff
 
 struct SlippageModelTests {
     private let model = SlippageModel.constantProduct(liquidityUSD: 1_000_000)
