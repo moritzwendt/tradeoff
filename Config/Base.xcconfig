@@ -1,0 +1,4 @@
+APP_BUNDLE_ID = app.candle.papertrading
+FINNHUB_API_KEY =
+DEVELOPMENT_TEAM =
+#include? "Secrets.xcconfig"

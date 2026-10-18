@@ -3,12 +3,14 @@
 
 xcuserdata/
 *.xcuserstate
+*.xcodeproj
 DerivedData/
 build/
 .build/
 .swiftpm/
 
 Secrets.xcconfig
+Candle/Info.plist
 
 .claude/
 internal/
