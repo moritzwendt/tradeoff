@@ -7,7 +7,7 @@ struct SettingsValues: Codable, Equatable, Sendable {
     var maxQuoteAge: Double = 30
     var chartStyle: ChartStyle = .line
     var hapticsEnabled: Bool = true
-    var mockVolatility: Double = 40
+    var mockVolatility: Double = 12
     var mockTickInterval: Double = 1
 
     init() {}

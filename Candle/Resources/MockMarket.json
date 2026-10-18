@@ -1,7 +1,7 @@
 {
   "tick": {
     "intervalSeconds": 1.0,
-    "volatilityMultiplier": 40
+    "volatilityMultiplier": 12
   },
   "instruments": [
     {

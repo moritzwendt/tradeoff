@@ -33,6 +33,32 @@ struct PriceSeriesGeneratorTests {
         #expect(first != second)
     }
 
+    @Test func instrumentsAreStatisticallyIndependent() throws {
+        func returns(_ symbol: String) throws -> [Double] {
+            let closes = try series(.day, symbol: symbol).map { $0.close.doubleValue }
+            return zip(closes, closes.dropFirst()).map { log($1 / $0) }
+        }
+        func correlation(_ first: [Double], _ second: [Double]) -> Double {
+            let meanFirst = first.reduce(0, +) / Double(first.count)
+            let meanSecond = second.reduce(0, +) / Double(second.count)
+            var covariance = 0.0
+            var varianceFirst = 0.0
+            var varianceSecond = 0.0
+            for (a, b) in zip(first, second) {
+                covariance += (a - meanFirst) * (b - meanSecond)
+                varianceFirst += (a - meanFirst) * (a - meanFirst)
+                varianceSecond += (b - meanSecond) * (b - meanSecond)
+            }
+            return covariance / (varianceFirst * varianceSecond).squareRoot()
+        }
+        let apple = try returns("AAPL")
+        let tesla = try returns("TSLA")
+        let nvidia = try returns("NVDA")
+        #expect(abs(correlation(apple, tesla)) < 0.25)
+        #expect(abs(correlation(apple, nvidia)) < 0.25)
+        #expect(abs(correlation(tesla, nvidia)) < 0.25)
+    }
+
     @Test func lastCloseEqualsAnchor() throws {
         #expect(try series(.week).last?.close == TestSupport.decimal("227.4"))
     }

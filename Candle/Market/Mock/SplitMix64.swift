@@ -4,7 +4,12 @@ struct SplitMix64: RandomNumberGenerator, Sendable {
     private var state: UInt64
 
     init(seed: UInt64) {
-        state = seed
+        var seeder = SplitMix64(rawState: seed)
+        state = seeder.next()
+    }
+
+    private init(rawState: UInt64) {
+        state = rawState
     }
 
     mutating func next() -> UInt64 {

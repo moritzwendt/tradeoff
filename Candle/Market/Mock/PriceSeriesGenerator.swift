@@ -21,7 +21,7 @@ enum PriceSeriesGenerator {
         let sigma = definition.dailyVolatility * stepFraction.squareRoot()
         let drift = definition.dailyDrift * stepFraction
         let rangeIndex = UInt64(ChartRange.allCases.firstIndex(of: range) ?? 0)
-        var generator = SplitMix64(seed: definition.seed &* 0x9E37_79B9_7F4A_7C15 &+ rangeIndex &+ 1)
+        var generator = SplitMix64(seed: definition.seed &* 1_000 &+ rangeIndex)
 
         let substeps = 4
         var raw: [RawCandle] = []

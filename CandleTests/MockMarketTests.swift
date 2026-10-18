@@ -65,7 +65,7 @@ struct MockMarketTests {
 
     @Test func streamEmitsQuotesAfterTuning() async throws {
         let mock = try provider()
-        await mock.update(tuning: MockPriceProvider.Tuning(tickInterval: 0.05, volatilityMultiplier: 40))
+        await mock.update(tuning: MockPriceProvider.Tuning(tickInterval: 0.05, volatilityMultiplier: 12))
         let apple = try #require(await mock.catalog().first)
         let stream = await mock.quotes(for: [apple])
         var received: Quote?
