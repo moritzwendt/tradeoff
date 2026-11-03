@@ -53,6 +53,6 @@ final class FillRecord {
     }
 
     var quality: QuoteQuality {
-        QuoteQuality(rawValue: qualityRaw) ?? .simulated
+        QuoteQuality(rawValue: qualityRaw) ?? .live
     }
 }

@@ -16,4 +16,10 @@ struct ProviderRegistry: Sendable {
     func availability(for id: ProviderID) -> ProviderAvailability {
         storage[id]?.availability ?? .notImplemented
     }
+
+    var activeAssetClasses: Set<AssetClass> {
+        all
+            .filter { $0.availability == .ready }
+            .reduce(into: Set<AssetClass>()) { $0.formUnion($1.capabilities.supportedAssetClasses) }
+    }
 }

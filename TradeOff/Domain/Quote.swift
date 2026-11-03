@@ -3,13 +3,11 @@ import Foundation
 enum QuoteQuality: String, Codable, Sendable {
     case live
     case delayed
-    case simulated
 
     var title: String {
         switch self {
         case .live: "Live"
         case .delayed: "Verzögert"
-        case .simulated: "Simuliert"
         }
     }
 }
@@ -20,8 +18,8 @@ struct Quote: Equatable, Sendable {
     var ask: Decimal
     var last: Decimal
     var previousClose: Decimal
-    var dayHigh: Decimal
-    var dayLow: Decimal
+    var dayHigh: Decimal?
+    var dayLow: Decimal?
     var volume24h: Decimal?
     var liquidityUSD: Decimal?
     var timestamp: Date

@@ -5,7 +5,6 @@ struct SettingsScreen: View {
     @Environment(AppEnvironment.self) private var environment
     @Environment(QuoteHub.self) private var hub
     @State private var confirmReset = false
-    @State private var isSeeding = false
 
     var body: some View {
         @Bindable var settings = settings
@@ -17,15 +16,7 @@ struct SettingsScreen: View {
                 TradingSection(values: $settings.values)
                 DisplaySection(values: $settings.values)
                 providersSection
-                DevelopmentSection(values: $settings.values, isSeeding: isSeeding) {
-                    Task {
-                        isSeeding = true
-                        await environment.loadDemoPortfolio()
-                        isSeeding = false
-                    }
-                } onResetSettings: {
-                    settings.reset()
-                }
+                resetSection
                 aboutSection
             }
             .scrollContentBackground(.hidden)
@@ -57,6 +48,15 @@ struct SettingsScreen: View {
                             in: .capsule
                         )
                 }
+            }
+        }
+        .listRowBackground(Theme.fill)
+    }
+
+    private var resetSection: some View {
+        Section {
+            Button("Einstellungen zurücksetzen") {
+                settings.reset()
             }
         }
         .listRowBackground(Theme.fill)
@@ -162,38 +162,6 @@ private struct DisplaySection: View {
                 }
             }
             Toggle("Haptik", isOn: $values.hapticsEnabled)
-        }
-        .listRowBackground(Theme.fill)
-    }
-}
-
-private struct DevelopmentSection: View {
-    @Binding var values: SettingsValues
-    let isSeeding: Bool
-    let onSeed: () -> Void
-    let onResetSettings: () -> Void
-
-    var body: some View {
-        Section("Entwicklung") {
-            VStack(alignment: .leading, spacing: 8) {
-                LabeledContent("Schwankung", value: "\(Int(values.mockVolatility))x")
-                Slider(value: $values.mockVolatility, in: 1...150, step: 1)
-            }
-            VStack(alignment: .leading, spacing: 8) {
-                LabeledContent("Tempo", value: "\(values.mockTickInterval.formatted(.number.precision(.fractionLength(1)))) s")
-                Slider(value: $values.mockTickInterval, in: 0.25...5, step: 0.25)
-            }
-            Button(action: onSeed) {
-                HStack {
-                    Text("Demo Portfolio laden")
-                    if isSeeding {
-                        Spacer()
-                        ProgressView()
-                    }
-                }
-            }
-            .disabled(isSeeding)
-            Button("Einstellungen zurücksetzen", action: onResetSettings)
         }
         .listRowBackground(Theme.fill)
     }

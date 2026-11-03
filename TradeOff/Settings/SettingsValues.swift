@@ -7,8 +7,6 @@ struct SettingsValues: Codable, Equatable, Sendable {
     var maxQuoteAge: Double = 30
     var chartStyle: ChartStyle = .line
     var hapticsEnabled: Bool = true
-    var mockVolatility: Double = 12
-    var mockTickInterval: Double = 1
 
     init() {}
 
@@ -21,7 +19,5 @@ struct SettingsValues: Codable, Equatable, Sendable {
         maxQuoteAge = try container.decodeIfPresent(Double.self, forKey: .maxQuoteAge) ?? defaults.maxQuoteAge
         chartStyle = try container.decodeIfPresent(ChartStyle.self, forKey: .chartStyle) ?? defaults.chartStyle
         hapticsEnabled = try container.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? defaults.hapticsEnabled
-        mockVolatility = try container.decodeIfPresent(Double.self, forKey: .mockVolatility) ?? defaults.mockVolatility
-        mockTickInterval = try container.decodeIfPresent(Double.self, forKey: .mockTickInterval) ?? defaults.mockTickInterval
     }
 }

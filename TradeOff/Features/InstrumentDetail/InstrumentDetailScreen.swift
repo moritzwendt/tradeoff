@@ -163,11 +163,13 @@ struct InstrumentDetailScreen: View {
                     StatDivider()
                     StatRow(title: "Spread", value: PriceFormatter.percent(quote.spreadFraction, signed: false))
                     StatDivider()
-                    StatRow(title: "Tageshoch", value: PriceFormatter.price(quote.dayHigh))
-                    StatDivider()
-                    StatRow(title: "Tagestief", value: PriceFormatter.price(quote.dayLow))
-                    StatDivider()
-                    StatRow(title: "Vortag", value: PriceFormatter.price(quote.previousClose))
+                    if let high = quote.dayHigh, let low = quote.dayLow {
+                        StatRow(title: "Hoch 24h", value: PriceFormatter.price(high))
+                        StatDivider()
+                        StatRow(title: "Tief 24h", value: PriceFormatter.price(low))
+                        StatDivider()
+                    }
+                    StatRow(title: "Vor 24h", value: PriceFormatter.price(quote.previousClose))
                     if let liquidity = quote.liquidityUSD {
                         StatDivider()
                         StatRow(title: "Liquidität", value: PriceFormatter.compactMoney(liquidity))

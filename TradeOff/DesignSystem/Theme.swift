@@ -44,7 +44,6 @@ enum Theme {
         switch quality {
         case .live: positive
         case .delayed: Color(red: 1.0, green: 0.84, blue: 0.35)
-        case .simulated: simulation
         }
     }
 }

@@ -8,6 +8,6 @@ protocol PriceProvider: Sendable {
     func catalog() async -> [Instrument]
     func search(query: String) async throws -> [Instrument]
     func snapshot(for instruments: [Instrument]) async throws -> [Quote]
-    func quotes(for instruments: [Instrument]) async -> AsyncStream<Quote>
+    func quotes(for instruments: [Instrument]) async -> AsyncStream<ProviderEvent>
     func history(for instrument: Instrument, range: ChartRange) async throws -> [Candlestick]
 }

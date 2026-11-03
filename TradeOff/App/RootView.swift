@@ -53,8 +53,6 @@ struct RootView: View {
             default: break
             }
         }
-        .onChange(of: settings.values.mockVolatility) { Task { await environment.applyMockTuning() } }
-        .onChange(of: settings.values.mockTickInterval) { Task { await environment.applyMockTuning() } }
     }
 
     private func recordEquityLoop() async {

@@ -5,8 +5,9 @@ enum ProviderError: Error, Equatable, Sendable {
     case missingAPIKey(ProviderID)
     case rateLimited(ProviderID, retryAfter: TimeInterval?)
     case invalidResponse(ProviderID)
+    case network(ProviderID)
     case unknownInstrument(InstrumentID)
-    case resourceMissing(String)
+    case historyUnavailable(InstrumentID)
 }
 
 extension ProviderError: LocalizedError {
@@ -16,8 +17,9 @@ extension ProviderError: LocalizedError {
         case .missingAPIKey(let id): "\(id.displayName) braucht einen API Key"
         case .rateLimited(let id, _): "\(id.displayName) Limit erreicht"
         case .invalidResponse(let id): "\(id.displayName) lieferte eine ungültige Antwort"
+        case .network(let id): "Keine Verbindung zu \(id.displayName)"
         case .unknownInstrument: "Unbekanntes Instrument"
-        case .resourceMissing(let name): "Ressource \(name) fehlt"
+        case .historyUnavailable: "Kein Verlauf verfügbar"
         }
     }
 }

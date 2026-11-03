@@ -1,13 +1,6 @@
 import Foundation
 import Observation
 
-enum ProviderStatus: Equatable, Sendable {
-    case idle
-    case connecting
-    case live
-    case failed(String)
-}
-
 @MainActor
 @Observable
 final class QuoteHub {
@@ -21,6 +14,7 @@ final class QuoteHub {
     @ObservationIgnored private var streams: [ProviderID: Stream] = [:]
     @ObservationIgnored private var loadingSparklines: Set<InstrumentID> = []
     @ObservationIgnored private var isPaused = false
+    @ObservationIgnored private let backoff = Backoff(base: 2, factor: 2, maximum: 30)
 
     private struct Pin {
         var instrument: Instrument
@@ -36,8 +30,34 @@ final class QuoteHub {
         self.registry = registry
     }
 
+    var degradedProviders: [ProviderID] {
+        statuses
+            .filter { $0.value.isDegraded }
+            .map(\.key)
+            .sorted { $0.rawValue < $1.rawValue }
+    }
+
     func quote(for id: InstrumentID) -> Quote? {
         quotes[id]
+    }
+
+    func message(for provider: ProviderID) -> String? {
+        switch statuses[provider] {
+        case .failed(let text): text
+        case .reconnecting: "Verbindung zu \(provider.displayName) wird neu aufgebaut"
+        default: nil
+        }
+    }
+
+    func reconnect() {
+        for stream in streams.values {
+            stream.task.cancel()
+        }
+        streams = [:]
+        for id in degradedProviders {
+            statuses[id] = .connecting
+        }
+        reconcile()
     }
 
     func ingest(_ quote: Quote) {
@@ -99,13 +119,19 @@ final class QuoteHub {
     }
 
     func search(_ query: String) async -> [Instrument] {
-        var result: [Instrument] = []
-        for provider in registry.all where provider.availability == .ready {
-            if let found = try? await provider.search(query: query) {
-                result += found
+        let providers = registry.all.filter { $0.availability == .ready }
+        return await withTaskGroup(of: (Int, [Instrument]).self) { group in
+            for (index, provider) in providers.enumerated() {
+                group.addTask {
+                    (index, (try? await provider.search(query: query)) ?? [])
+                }
             }
+            var found: [Int: [Instrument]] = [:]
+            for await (index, items) in group {
+                found[index] = items
+            }
+            return providers.indices.flatMap { found[$0] ?? [] }
         }
-        return result
     }
 
     func loadSparkline(for instrument: Instrument) async {
@@ -148,23 +174,48 @@ final class QuoteHub {
 
     private func start(provider: any PriceProvider, instruments: [Instrument]) -> Task<Void, Never> {
         let id = provider.id
+        let backoff = backoff
         return Task { [weak self] in
-            self?.statuses[id] = .connecting
-            do {
-                let snapshot = try await provider.snapshot(for: instruments)
-                guard !Task.isCancelled else { return }
-                self?.apply(snapshot)
-                self?.statuses[id] = .live
-                let stream = await provider.quotes(for: instruments)
-                for await quote in stream {
-                    if Task.isCancelled { break }
-                    self?.apply([quote])
-                }
-            } catch {
-                if !Task.isCancelled {
+            var attempt = 0
+            while !Task.isCancelled {
+                self?.statuses[id] = attempt == 0 ? .connecting : .reconnecting
+                do {
+                    let snapshot = try await provider.snapshot(for: instruments)
+                    guard !Task.isCancelled else { return }
+                    self?.apply(snapshot)
+                    self?.statuses[id] = .live
+                    attempt = 0
+                    let stream = await provider.quotes(for: instruments)
+                    for await event in stream {
+                        if Task.isCancelled { return }
+                        self?.handle(event, from: id)
+                    }
+                    return
+                } catch {
+                    if Task.isCancelled || error is CancellationError { return }
                     self?.statuses[id] = .failed(error.localizedDescription)
+                    let wait = Self.retryDelay(for: error, attempt: attempt, backoff: backoff)
+                    try? await Task.sleep(for: .seconds(wait))
+                    attempt += 1
                 }
             }
+        }
+    }
+
+    nonisolated static func retryDelay(for error: Error, attempt: Int, backoff: Backoff) -> TimeInterval {
+        let base = backoff.delay(attempt: attempt)
+        if case ProviderError.rateLimited(_, let retryAfter?) = error {
+            return max(base, retryAfter)
+        }
+        return base
+    }
+
+    private func handle(_ event: ProviderEvent, from id: ProviderID) {
+        switch event {
+        case .quote(let quote):
+            quotes[quote.instrumentID] = quote
+        case .status(let status):
+            statuses[id] = status
         }
     }
 

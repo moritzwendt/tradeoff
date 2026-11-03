@@ -10,20 +10,18 @@ final class AppEnvironment {
     let hub: QuoteHub
     let trading: TradingService
     let recorder: EquityCurveRecorder
-    let mock: MockPriceProvider
     let config: AppConfig
     private let defaults: UserDefaults
 
     init(
         inMemory: Bool = false,
         defaults: UserDefaults = .standard,
-        config: AppConfig = AppConfig()
+        config: AppConfig = AppConfig(),
+        registry: ProviderRegistry? = nil
     ) throws {
         let container = try PersistenceController.makeContainer(inMemory: inMemory)
         let settings = AppSettings(defaults: defaults)
-        let mock = try MockPriceProvider.bundled()
-        let registry = ProviderRegistry([
-            mock,
+        let registry = registry ?? ProviderRegistry([
             BinanceProvider(),
             DexScreenerProvider(),
             FinnhubProvider(apiKey: config.finnhubAPIKey)
@@ -33,7 +31,6 @@ final class AppEnvironment {
         self.container = container
         self.settings = settings
         self.hub = hub
-        self.mock = mock
         self.config = config
         self.defaults = defaults
         trading = TradingService(context: container.mainContext, hub: hub, settings: settings)
@@ -50,8 +47,7 @@ final class AppEnvironment {
 
     func prepare() async {
         _ = trading.account()
-        await applyMockTuning()
-        let key = "tradeoff.watchlist.seeded"
+        let key = "tradeoff.watchlist.seeded.live"
         guard !defaults.bool(forKey: key) else { return }
         let context = container.mainContext
         let catalog = await hub.catalog()
@@ -60,20 +56,6 @@ final class AppEnvironment {
         }
         try? context.save()
         defaults.set(true, forKey: key)
-    }
-
-    func applyMockTuning() async {
-        await mock.update(
-            tuning: MockPriceProvider.Tuning(
-                tickInterval: settings.values.mockTickInterval,
-                volatilityMultiplier: settings.values.mockVolatility
-            )
-        )
-    }
-
-    func loadDemoPortfolio() async {
-        await DemoSeeder.seed(context: container.mainContext, hub: hub, settings: settings)
-        recorder.record(force: true)
     }
 
     func resetAccount() {

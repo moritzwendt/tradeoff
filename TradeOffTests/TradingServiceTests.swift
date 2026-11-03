@@ -18,8 +18,7 @@ struct TradingServiceTests {
         let defaults = UserDefaults(suiteName: "tradeoff.tests.\(UUID().uuidString)") ?? .standard
         let settings = AppSettings(defaults: defaults)
         settings.values.startingBalance = startingBalance
-        let mock = try MockPriceProvider.bundled()
-        let hub = QuoteHub(registry: ProviderRegistry([mock]))
+        let hub = QuoteHub(registry: ProviderRegistry([]))
         let instrument = TestSupport.instrument("AAPL")
         hub.ingest(TestSupport.quote(for: instrument))
         let trading = TradingService(

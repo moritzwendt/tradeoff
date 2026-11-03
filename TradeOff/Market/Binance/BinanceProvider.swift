@@ -30,7 +30,7 @@ struct BinanceProvider: PriceProvider {
         throw ProviderError.notImplemented(id)
     }
 
-    func quotes(for instruments: [Instrument]) async -> AsyncStream<Quote> {
+    func quotes(for instruments: [Instrument]) async -> AsyncStream<ProviderEvent> {
         AsyncStream { $0.finish() }
     }
 

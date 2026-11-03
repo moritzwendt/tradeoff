@@ -17,7 +17,7 @@ enum TestSupport {
     static func instrument(
         _ symbol: String = "AAPL",
         assetClass: AssetClass = .stock,
-        provider: ProviderID = .mock
+        provider: ProviderID = .binance
     ) -> Instrument {
         Instrument(
             id: Instrument.makeID(provider: provider, symbol: symbol),
@@ -48,8 +48,8 @@ enum TestSupport {
             volume24h: nil,
             liquidityUSD: liquidity.map(decimal),
             timestamp: timestamp,
-            source: .mock,
-            quality: .simulated,
+            source: .binance,
+            quality: .live,
             isSyntheticSpread: true
         )
     }
