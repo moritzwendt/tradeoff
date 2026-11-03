@@ -110,6 +110,9 @@ actor AlpacaProvider: PriceProvider {
         }
 
         var candles = try AlpacaParsing.candles(data, symbol: instrument.symbol)
+        if let bucket = request.intradayBucket {
+            candles = CandleSessions.regularHours(in: candles, bucket: bucket)
+        }
         if range == .day {
             candles = CandleSessions.latest(in: candles)
         }

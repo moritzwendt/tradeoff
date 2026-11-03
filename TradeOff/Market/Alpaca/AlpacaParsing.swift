@@ -17,6 +17,13 @@ enum AlpacaParsing {
     struct BarsRequest: Equatable, Sendable {
         let timeframe: String
         let lookback: TimeInterval
+        let intradayBucket: TimeInterval?
+
+        init(timeframe: String, lookback: TimeInterval, intradayBucket: TimeInterval? = nil) {
+            self.timeframe = timeframe
+            self.lookback = lookback
+            self.intradayBucket = intradayBucket
+        }
     }
 
     static let recentDataDelay: TimeInterval = 16 * 60
@@ -24,9 +31,9 @@ enum AlpacaParsing {
 
     static func barsRequest(for range: ChartRange) -> BarsRequest {
         switch range {
-        case .day: BarsRequest(timeframe: "5Min", lookback: 5 * 86_400)
-        case .week: BarsRequest(timeframe: "30Min", lookback: 9 * 86_400)
-        case .month: BarsRequest(timeframe: "4Hour", lookback: 30 * 86_400)
+        case .day: BarsRequest(timeframe: "5Min", lookback: 5 * 86_400, intradayBucket: 300)
+        case .week: BarsRequest(timeframe: "30Min", lookback: 9 * 86_400, intradayBucket: 1_800)
+        case .month: BarsRequest(timeframe: "1Hour", lookback: 30 * 86_400, intradayBucket: 3_600)
         case .quarter: BarsRequest(timeframe: "1Day", lookback: 90 * 86_400)
         case .year: BarsRequest(timeframe: "1Day", lookback: 365 * 86_400)
         case .max: BarsRequest(timeframe: "1Week", lookback: 5 * 365 * 86_400)
