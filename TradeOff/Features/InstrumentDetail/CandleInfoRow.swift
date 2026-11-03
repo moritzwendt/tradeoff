@@ -15,10 +15,10 @@ struct CandleInfoRow: View {
     private func cell(_ title: String, _ value: Decimal) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
-                .font(.caption2)
+                .font(Typography.axis)
                 .foregroundStyle(Theme.textTertiary)
             Text(PriceFormatter.price(value))
-                .font(.caption.weight(.semibold))
+                .font(Typography.labelStrong)
                 .monospacedDigit()
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)

@@ -26,7 +26,7 @@ struct InstrumentDetailScreen: View {
         let change = model.rangeChange(in: candles) ?? quote.map { (value: $0.change, fraction: $0.changeFraction) }
 
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 28) {
                 header(quote: quote, selected: selected, change: change)
                 chartSection(candles: candles, selected: selected, change: change)
                 statsSection(quote: quote)
@@ -53,13 +53,13 @@ struct InstrumentDetailScreen: View {
                 .accessibilityLabel(watchEntries.isEmpty ? "Zur Watchlist" : "Von Watchlist entfernen")
             }
         }
+        .toolbarVisibility(.hidden, for: .tabBar)
+        .safeAreaInset(edge: .bottom, spacing: 0) { actionBar }
         .overlay(alignment: .top) {
             ConnectionBanner()
                 .padding(.horizontal, Theme.screenPadding)
                 .padding(.top, 4)
         }
-        .toolbarVisibility(.hidden, for: .tabBar)
-        .safeAreaBar(edge: .bottom) { actionBar }
         .sheet(item: $ticketSide) { side in
             OrderTicketScreen(instrument: instrument, side: side)
         }
@@ -72,45 +72,56 @@ struct InstrumentDetailScreen: View {
     private func header(quote: Quote?, selected: Candlestick?, change: (value: Decimal, fraction: Decimal)?) -> some View {
         let session = MarketCalendars().session(for: instrument.assetClass, at: Date())
         let subtitle = [instrument.assetClass.singularTitle, instrument.network].compactMap { $0 }.joined(separator: " · ")
-        return VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
+        let price = selected?.close ?? quote?.last
+        return VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(instrument.name)
-                    .font(.title3.weight(.semibold))
+                    .font(Typography.section)
                     .foregroundStyle(Theme.textPrimary)
-                HStack(spacing: 10) {
+                    .lineLimit(2)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) {
+                        Text(subtitle)
+                        if instrument.assetClass.calendarKind == .usEquities {
+                            MarketSessionBadge(session: session)
+                        }
+                    }
                     Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
-                    if instrument.assetClass.calendarKind == .usEquities {
-                        MarketSessionBadge(session: session)
+                }
+                .font(Typography.rowDetail)
+                .foregroundStyle(Theme.textSecondary)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Group {
+                    if let price {
+                        PriceText(value: price, font: Typography.display)
+                            .foregroundStyle(Theme.textPrimary)
+                    } else {
+                        Text("000,00 $")
+                            .font(Typography.display)
+                            .placeholder(true)
                     }
                 }
-            }
+                .minimumScaleFactor(0.6)
 
-            if let price = selected?.close ?? quote?.last {
-                PriceText(value: price, font: .system(size: 40, weight: .semibold))
-                    .foregroundStyle(Theme.textPrimary)
-            } else {
-                SkeletonBar(width: 190, height: 40)
-            }
-
-            HStack(spacing: 8) {
-                if let selected {
-                    Text(TimeFormat.detail(selected.time, range: model.range))
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
-                } else if let change {
-                    Text(PriceFormatter.change(change.value))
-                        .monospacedDigit()
-                    Text(PriceFormatter.percent(change.fraction))
-                        .monospacedDigit()
-                } else {
-                    SkeletonBar(width: 120, height: 16)
+                HStack(spacing: 8) {
+                    if let selected {
+                        Text(TimeFormat.detail(selected.time, range: model.range))
+                            .foregroundStyle(Theme.textSecondary)
+                    } else if let change {
+                        Text(PriceFormatter.change(change.value))
+                        Text(PriceFormatter.percent(change.fraction))
+                    } else {
+                        Text("+0,00 $  +0,00 %")
+                            .placeholder(true)
+                    }
                 }
+                .font(Typography.value)
+                .monospacedDigit()
+                .foregroundStyle(selected == nil && change != nil ? Theme.pnl(change?.value ?? 0) : Theme.textSecondary)
+                .frame(minHeight: 22, alignment: .leading)
             }
-            .font(.subheadline.weight(.medium))
-            .foregroundStyle(selected == nil ? Theme.pnl(change?.value ?? 0) : Theme.textSecondary)
-            .frame(minHeight: 22)
         }
     }
 
@@ -131,30 +142,27 @@ struct InstrumentDetailScreen: View {
 
             ZStack {
                 if candles.isEmpty {
-                    if model.isLoading {
-                        SkeletonBar(height: 220)
-                    } else if model.loadFailed {
+                    if model.loadFailed {
                         VStack(spacing: 12) {
                             Image(systemName: "chart.line.uptrend.xyaxis")
-                                .font(.largeTitle)
+                                .font(Typography.display)
                                 .foregroundStyle(Theme.textTertiary)
                             Text("Verlauf nicht verfügbar")
-                                .font(.subheadline.weight(.medium))
+                                .font(Typography.value)
                                 .foregroundStyle(Theme.textSecondary)
                             Button("Erneut laden") {
                                 Task { await model.load(using: hub) }
                             }
-                            .font(.subheadline.weight(.semibold))
+                            .font(Typography.labelStrong)
                             .foregroundStyle(Theme.textPrimary)
                             .padding(.horizontal, 16)
-                            .frame(minHeight: 40)
+                            .frame(minHeight: 44)
                             .background(Theme.surfaceRaised, in: .capsule)
                             .buttonStyle(.plain)
                         }
                     } else {
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                            .font(.largeTitle)
-                            .foregroundStyle(Theme.textTertiary)
+                        ChartPlaceholder(values: hub.sparklines[instrument.id])
+                            .appearsAfter(.milliseconds(150))
                     }
                 } else {
                     PriceChart(
@@ -184,11 +192,8 @@ struct InstrumentDetailScreen: View {
                             statCell(stat.0, stat.1)
                         }
                     } else {
-                        ForEach(0..<6, id: \.self) { _ in
-                            VStack(alignment: .leading, spacing: 6) {
-                                SkeletonBar(width: 56, height: 11)
-                                SkeletonBar(width: 90, height: 15)
-                            }
+                        ForEach(["Geld", "Brief", "Spread", "Hoch 24h", "Tief 24h", "Vor 24h"], id: \.self) { title in
+                            statCell(title, "000,00 $").placeholder(true)
                         }
                     }
                 }
@@ -217,10 +222,10 @@ struct InstrumentDetailScreen: View {
     private func statCell(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.footnote)
+                .font(Typography.label)
                 .foregroundStyle(Theme.textSecondary)
             Text(value)
-                .font(.subheadline.weight(.semibold))
+                .font(Typography.value)
                 .monospacedDigit()
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
@@ -245,10 +250,10 @@ struct InstrumentDetailScreen: View {
                     statCell("Wert", PriceFormatter.money(value))
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Gewinn und Verlust")
-                            .font(.footnote)
+                            .font(Typography.label)
                             .foregroundStyle(Theme.textSecondary)
                         Text("\(PriceFormatter.money(pnl, signed: true)) \(PriceFormatter.percent(fraction))")
-                            .font(.subheadline.weight(.semibold))
+                            .font(Typography.value)
                             .monospacedDigit()
                             .foregroundStyle(Theme.pnl(pnl))
                             .lineLimit(1)
@@ -261,20 +266,27 @@ struct InstrumentDetailScreen: View {
     }
 
     private var actionBar: some View {
-        HStack(spacing: 12) {
-            if !positions.isEmpty {
-                Button(OrderSide.sell.title) {
-                    ticketSide = .sell
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Theme.separator)
+                .frame(height: 0.5)
+            HStack(spacing: 12) {
+                if !positions.isEmpty {
+                    Button(OrderSide.sell.title) {
+                        ticketSide = .sell
+                    }
+                    .buttonStyle(.filled(Theme.surfaceRaised, foreground: Theme.negative))
                 }
-                .buttonStyle(.filled(Theme.surfaceRaised, foreground: Theme.negative))
+                Button(OrderSide.buy.title) {
+                    ticketSide = .buy
+                }
+                .buttonStyle(.filled(Theme.positive))
             }
-            Button(OrderSide.buy.title) {
-                ticketSide = .buy
-            }
-            .buttonStyle(.filled(Theme.positive))
+            .padding(.horizontal, Theme.screenPadding)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
         }
-        .padding(.horizontal, Theme.screenPadding)
-        .padding(.bottom, 8)
+        .background(Theme.background)
     }
 
     private func toggleWatchlist() {
@@ -295,10 +307,10 @@ private struct ChartStyleToggle: View {
         @Bindable var settings = settings
         SegmentedControl(items: ChartStyle.allCases, selection: $settings.values.chartStyle) { style, isSelected in
             Image(systemName: style.systemImage)
-                .font(.footnote.weight(.semibold))
+                .font(Typography.labelStrong)
                 .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textSecondary)
         }
-        .frame(width: 88)
+        .frame(width: 96)
         .padding(2)
         .background(Theme.surface, in: .capsule)
         .accessibilityLabel("Chartstil")
