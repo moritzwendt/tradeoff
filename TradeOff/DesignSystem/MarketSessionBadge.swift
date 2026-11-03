@@ -9,7 +9,7 @@ struct MarketSessionBadge: View {
                 .fill(session.isOpen ? Theme.positive : Theme.textTertiary)
                 .frame(width: 6, height: 6)
             Text(session.isOpen ? "Börse geöffnet" : "Börse geschlossen")
-                .font(.footnote)
+                .font(Typography.label)
                 .foregroundStyle(Theme.textSecondary)
         }
     }

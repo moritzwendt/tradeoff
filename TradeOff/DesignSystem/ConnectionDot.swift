@@ -20,7 +20,7 @@ struct ConnectionDot: View {
                             : .default,
                         value: pulse
                     )
-                    .frame(width: 28, height: 28)
+                    .frame(width: 44, height: 44)
                     .contentShape(.rect)
             }
             .accessibilityLabel("Verbindung")

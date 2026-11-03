@@ -16,7 +16,7 @@ struct StatRow: View {
                 .monospacedDigit()
                 .contentTransition(.numericText())
         }
-        .font(.subheadline)
+        .font(Typography.rowDetail)
         .padding(.vertical, compact ? 8 : 12)
     }
 }

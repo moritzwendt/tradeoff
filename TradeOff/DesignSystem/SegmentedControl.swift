@@ -39,7 +39,7 @@ extension SegmentedControl where Label == Text {
         self._selection = selection
         self.label = { item, isSelected in
             Text(title(item))
-                .font(.footnote.weight(.semibold))
+                .font(Typography.labelStrong)
                 .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textSecondary)
         }
     }

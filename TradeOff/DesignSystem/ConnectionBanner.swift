@@ -10,21 +10,18 @@ struct ConnectionBanner: View {
                 HStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(Theme.warning)
-                    VStack(alignment: .leading, spacing: 2) {
-                        ForEach(providers) { provider in
-                            Text(hub.message(for: provider) ?? provider.displayName)
-                                .font(.subheadline)
-                                .foregroundStyle(Theme.textPrimary)
-                        }
-                    }
-                    Spacer(minLength: 8)
+                    Text(summary(providers))
+                        .font(Typography.rowDetail)
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Button("Erneut") {
                         hub.reconnect()
                     }
-                    .font(.subheadline.weight(.semibold))
+                    .font(Typography.value)
                     .foregroundStyle(Theme.textPrimary)
                     .padding(.horizontal, 14)
-                    .frame(minHeight: 36)
+                    .frame(minHeight: 44)
                     .background(Theme.surfaceRaised, in: .capsule)
                     .buttonStyle(.plain)
                 }
@@ -33,5 +30,12 @@ struct ConnectionBanner: View {
                 .transition(.opacity)
             }
         }
+    }
+
+    private func summary(_ providers: [ProviderID]) -> String {
+        guard providers.count == 1, let provider = providers.first else {
+            return "Probleme bei \(providers.count) Datenquellen"
+        }
+        return hub.message(for: provider) ?? provider.displayName
     }
 }

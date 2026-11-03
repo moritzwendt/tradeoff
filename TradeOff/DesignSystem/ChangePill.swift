@@ -12,7 +12,7 @@ struct ChangePill: View {
                 .monospacedDigit()
                 .contentTransition(.numericText(value: fraction.doubleValue))
         }
-        .font(.footnote.weight(.semibold))
+        .font(Typography.labelStrong)
         .foregroundStyle(color)
         .lineLimit(1)
         .fixedSize(horizontal: true, vertical: false)

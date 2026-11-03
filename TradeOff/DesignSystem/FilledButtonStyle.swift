@@ -17,7 +17,7 @@ private struct FilledButtonBody: View {
 
     var body: some View {
         configuration.label
-            .font(.headline)
+            .font(Typography.rowTitle)
             .foregroundStyle(isEnabled ? foreground : Theme.textTertiary)
             .frame(maxWidth: .infinity, minHeight: 52)
             .background(isEnabled ? fill : Theme.surfaceRaised, in: .capsule)

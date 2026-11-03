@@ -16,7 +16,7 @@ struct FilterChips<Item: Hashable & Identifiable>: View {
                         }
                     } label: {
                         Text(title(item))
-                            .font(.subheadline.weight(.semibold))
+                            .font(Typography.labelStrong)
                             .foregroundStyle(isSelected ? Color.black : Theme.textSecondary)
                             .padding(.horizontal, 14)
                             .frame(minHeight: 36)

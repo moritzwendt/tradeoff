@@ -99,7 +99,7 @@ struct PriceChart: View {
                         }
                     }
                 }
-                .font(.caption2)
+                .font(Typography.axis)
                 .foregroundStyle(Theme.textTertiary)
             }
         }
@@ -112,7 +112,7 @@ struct PriceChart: View {
                         Text(PriceFormatter.axis(price))
                     }
                 }
-                .font(.caption2)
+                .font(Typography.axis)
                 .foregroundStyle(Theme.textTertiary)
             }
         }

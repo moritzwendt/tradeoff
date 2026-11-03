@@ -17,20 +17,23 @@ struct EquityChart: View {
 
     var body: some View {
         let bounds = yBounds()
+        let flat = isFlat
         Chart {
             ForEach(points) { point in
-                AreaMark(
-                    x: .value("Zeit", point.time),
-                    yStart: .value("Basis", bounds.lowerBound),
-                    yEnd: .value("Wert", point.value)
-                )
-                .foregroundStyle(
-                    LinearGradient(colors: [tint.opacity(0.18), tint.opacity(0)], startPoint: .top, endPoint: .bottom)
-                )
-                .interpolationMethod(.monotone)
+                if !flat {
+                    AreaMark(
+                        x: .value("Zeit", point.time),
+                        yStart: .value("Basis", bounds.lowerBound),
+                        yEnd: .value("Wert", point.value)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(colors: [tint.opacity(0.18), tint.opacity(0)], startPoint: .top, endPoint: .bottom)
+                    )
+                    .interpolationMethod(.monotone)
+                }
                 LineMark(x: .value("Zeit", point.time), y: .value("Wert", point.value))
-                    .foregroundStyle(tint)
-                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(flat ? Theme.textTertiary : tint)
+                    .lineStyle(StrokeStyle(lineWidth: flat ? 1.5 : 2, lineCap: .round, lineJoin: .round, dash: flat ? [4, 4] : []))
                     .interpolationMethod(.monotone)
             }
             if let selected = selectedPoint {
@@ -50,7 +53,7 @@ struct EquityChart: View {
                         Text(axisLabel(for: date))
                     }
                 }
-                .font(.caption2)
+                .font(Typography.axis)
                 .foregroundStyle(Theme.textTertiary)
             }
         }
@@ -63,7 +66,7 @@ struct EquityChart: View {
                         Text(PriceFormatter.axis(amount))
                     }
                 }
-                .font(.caption2)
+                .font(Typography.axis)
                 .foregroundStyle(Theme.textTertiary)
             }
         }
@@ -86,11 +89,16 @@ struct EquityChart: View {
         return TimeFormat.axis(date, range: range)
     }
 
+    private var isFlat: Bool {
+        guard let low = points.map(\.value).min(), let high = points.map(\.value).max() else { return true }
+        return high - low <= max(abs(high) * 0.00001, 0.005)
+    }
+
     private func yBounds() -> ClosedRange<Double> {
         guard let low = points.map(\.value).min(), let high = points.map(\.value).max() else {
             return 0 ... 1
         }
-        let padding = max((high - low) * 0.12, high * 0.001)
+        let padding = isFlat ? max(abs(high) * 0.005, 0.5) : max((high - low) * 0.12, high * 0.001)
         return (low - padding) ... (high + padding)
     }
 }
