@@ -17,7 +17,7 @@ struct StatRow: View {
                 .contentTransition(.numericText())
         }
         .font(.subheadline)
-        .padding(.vertical, compact ? 6 : 10)
+        .padding(.vertical, compact ? 8 : 12)
     }
 }
 

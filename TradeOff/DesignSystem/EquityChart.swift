@@ -25,12 +25,12 @@ struct EquityChart: View {
                     yEnd: .value("Wert", point.value)
                 )
                 .foregroundStyle(
-                    LinearGradient(colors: [tint.opacity(0.30), tint.opacity(0)], startPoint: .top, endPoint: .bottom)
+                    LinearGradient(colors: [tint.opacity(0.18), tint.opacity(0)], startPoint: .top, endPoint: .bottom)
                 )
                 .interpolationMethod(.monotone)
                 LineMark(x: .value("Zeit", point.time), y: .value("Wert", point.value))
                     .foregroundStyle(tint)
-                    .lineStyle(StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                     .interpolationMethod(.monotone)
             }
             if let selected = selectedPoint {
@@ -47,7 +47,7 @@ struct EquityChart: View {
             AxisMarks(values: .automatic(desiredCount: 4)) { value in
                 AxisValueLabel {
                     if let date = value.as(Date.self) {
-                        Text(TimeFormat.axis(date, range: range))
+                        Text(axisLabel(for: date))
                     }
                 }
                 .font(.caption2)
@@ -76,6 +76,14 @@ struct EquityChart: View {
             selectedPoint = points.min { abs($0.time.timeIntervalSince(newValue)) < abs($1.time.timeIntervalSince(newValue)) }
         }
         .haptic(.selection, trigger: selectedPoint)
+    }
+
+    private func axisLabel(for date: Date) -> String {
+        let span = (points.last?.time ?? date).timeIntervalSince(points.first?.time ?? date)
+        if span < 2 * 86_400 {
+            return date.formatted(.dateTime.hour().minute())
+        }
+        return TimeFormat.axis(date, range: range)
     }
 
     private func yBounds() -> ClosedRange<Double> {

@@ -24,7 +24,8 @@ targets:
       path: TradeOff/Info.plist
       properties:
         CFBundleDisplayName: TradeOff
-        UILaunchScreen: {}
+        UILaunchScreen:
+          UIColorName: LaunchBackground
         UIUserInterfaceStyle: Dark
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

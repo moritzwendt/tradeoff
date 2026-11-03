@@ -70,6 +70,7 @@ struct OrderTicketScreen: View {
             .scrollIndicators(.hidden)
 
             VStack(spacing: 10) {
+                messageLine(evaluation, compact: compact)
                 AmountPad(keyHeight: compact ? 38 : 46) { model.press($0) }
                 confirmButton(evaluation: evaluation, quote: quote)
             }
@@ -102,6 +103,8 @@ struct OrderTicketScreen: View {
                 get: { model.side },
                 set: { model.switchSide(to: $0) }
             )) { $0.title }
+            .padding(4)
+            .background(Theme.surface, in: .capsule)
         }
     }
 
@@ -135,11 +138,12 @@ struct OrderTicketScreen: View {
             } label: {
                 Label(model.mode == .amount ? OrderTicketModel.InputMode.quantity.title : OrderTicketModel.InputMode.amount.title, systemImage: "arrow.left.arrow.right")
                     .font(.footnote.weight(.semibold))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 36)
             }
             .buttonStyle(.plain)
-            .glassEffect(.regular.interactive(), in: .capsule)
+            .background(Theme.surface, in: .capsule)
         }
         .frame(maxWidth: .infinity)
     }
@@ -151,27 +155,25 @@ struct OrderTicketScreen: View {
             ("75 %", Decimal(sign: .plus, exponent: -2, significand: 75)),
             ("Max", 1)
         ]
-        return GlassEffectContainer(spacing: 8) {
-            HStack(spacing: 8) {
-                ForEach(options, id: \.0) { option in
-                    Button {
-                        model.applyFraction(option.1, cash: cash, held: held)
-                    } label: {
-                        Text(option.0)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Theme.textPrimary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                    }
-                    .buttonStyle(.plain)
-                    .glassEffect(.regular.interactive(), in: .capsule)
+        return HStack(spacing: 8) {
+            ForEach(options, id: \.0) { option in
+                Button {
+                    model.applyFraction(option.1, cash: cash, held: held)
+                } label: {
+                    Text(option.0)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                        .background(Theme.surface, in: .capsule)
+                        .contentShape(.capsule)
                 }
+                .buttonStyle(.plain)
             }
         }
     }
 
     private func breakdown(evaluation: ExecutionEvaluation, cash: Decimal, held: Decimal) -> some View {
-        GlassCard {
+        Card {
             VStack(spacing: 0) {
                 if let preview = evaluation.preview {
                     StatRow(title: model.side == .buy ? "Brief" : "Geld", value: PriceFormatter.price(preview.referencePrice), compact: true)
@@ -180,7 +182,7 @@ struct OrderTicketScreen: View {
                         StatRow(
                             title: "Slippage",
                             value: "\(PriceFormatter.percent(preview.slippageFraction, signed: false)) (\(PriceFormatter.money(preview.slippageCost)))",
-                            valueColor: Theme.simulation,
+                            valueColor: Theme.warning,
                             compact: true
                         )
                         StatDivider()
@@ -197,19 +199,22 @@ struct OrderTicketScreen: View {
                         : "\(PriceFormatter.quantity(held, assetClass: instrument.assetClass)) \(instrument.symbol)",
                     compact: true
                 )
-                if let message = visibleMessage(evaluation) {
-                    StatDivider()
-                    HStack {
-                        Image(systemName: "exclamationmark.circle.fill")
-                        Text(message)
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.negative)
-                    .padding(.vertical, 10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
             }
         }
+    }
+
+    private func messageLine(_ evaluation: ExecutionEvaluation, compact: Bool) -> some View {
+        HStack(spacing: 6) {
+            if let message = visibleMessage(evaluation) {
+                Image(systemName: "exclamationmark.circle.fill")
+                Text(message)
+                    .lineLimit(1)
+            }
+        }
+        .font(.footnote.weight(.semibold))
+        .foregroundStyle(Theme.negative)
+        .frame(maxWidth: .infinity, minHeight: compact ? 0 : 18)
+        .animation(.easeOut(duration: 0.15), value: visibleMessage(evaluation))
     }
 
     private func visibleMessage(_ evaluation: ExecutionEvaluation) -> String? {
@@ -223,12 +228,8 @@ struct OrderTicketScreen: View {
             model.submit(trading: trading, recorder: environment.recorder, quote: quote)
         } label: {
             Text("\(instrument.symbol) \(model.side.title.lowercased())")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
         }
-        .buttonStyle(.glassProminent)
-        .tint(sideColor)
+        .buttonStyle(.filled(sideColor, foreground: model.side == .buy ? .black : .white))
         .disabled(!evaluation.isExecutable)
     }
 }
@@ -256,7 +257,7 @@ private struct FilledView: View {
                     .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()
             }
-            GlassCard {
+            Card {
                 VStack(spacing: 0) {
                     StatRow(title: "Gebühr", value: PriceFormatter.money(receipt.fee))
                     StatDivider()
@@ -265,9 +266,8 @@ private struct FilledView: View {
             }
             .padding(.horizontal, Theme.screenPadding)
             Button("Fertig") { onDone() }
-                .buttonStyle(.glassProminent)
-                .tint(color)
-                .controlSize(.large)
+                .buttonStyle(.filled(Color.white.opacity(0.92)))
+                .padding(.horizontal, 48)
         }
         .padding()
         .haptic(.success, trigger: receipt)

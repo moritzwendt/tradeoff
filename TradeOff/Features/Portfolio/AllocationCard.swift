@@ -30,7 +30,7 @@ struct AllocationCard: View {
         let items = slices
         let total = items.reduce(0) { $0 + $1.value }
 
-        GlassCard {
+        Card {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Verteilung")
                     .font(.headline)

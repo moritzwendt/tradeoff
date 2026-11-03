@@ -15,13 +15,11 @@ struct FillDetailSheet: View {
                                 .font(.title3.weight(.semibold))
                             Text("\(fill.side.pastTitle) \(fill.instrument.symbol)")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(fill.side == .buy ? Theme.positive : Theme.negative)
+                                .foregroundStyle(Theme.textSecondary)
                         }
-                        Spacer()
-                        QualityBadge(quality: fill.quality)
                     }
 
-                    GlassCard {
+                    Card {
                         VStack(spacing: 0) {
                             StatRow(title: "Menge", value: PriceFormatter.quantity(fill.quantity, assetClass: fill.instrument.assetClass))
                             StatDivider()
@@ -32,7 +30,7 @@ struct FillDetailSheet: View {
                             StatRow(title: "Spread", value: PriceFormatter.percent(fill.spreadFraction, signed: false))
                             if fill.slippageCost > 0 {
                                 StatDivider()
-                                StatRow(title: "Slippage", value: PriceFormatter.money(fill.slippageCost), valueColor: Theme.simulation)
+                                StatRow(title: "Slippage", value: PriceFormatter.money(fill.slippageCost), valueColor: Theme.warning)
                             }
                             StatDivider()
                             StatRow(title: "Gebühr", value: PriceFormatter.money(fill.fee))
@@ -41,7 +39,7 @@ struct FillDetailSheet: View {
                         }
                     }
 
-                    GlassCard {
+                    Card {
                         VStack(spacing: 0) {
                             if fill.side == .sell {
                                 StatRow(

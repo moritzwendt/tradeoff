@@ -14,7 +14,7 @@ struct TradeOffApp: App {
                 .environment(environment.trading)
                 .modelContainer(environment.container)
                 .preferredColorScheme(.dark)
-                .tint(Theme.accent)
+                .tint(Theme.textPrimary)
         }
     }
 }

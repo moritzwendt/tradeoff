@@ -10,27 +10,25 @@ struct SegmentedControl<Item: Hashable & Identifiable, Label: View>: View {
         HStack(spacing: 2) {
             ForEach(items) { item in
                 Button {
-                    withAnimation(.snappy(duration: 0.25)) {
+                    withAnimation(.snappy(duration: 0.22)) {
                         selection = item
                     }
                 } label: {
                     label(item, selection == item)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, minHeight: 34)
                         .contentShape(.capsule)
                         .background {
                             if selection == item {
                                 Capsule()
-                                    .fill(Color.white.opacity(0.15))
+                                    .fill(Theme.surfaceRaised)
                                     .matchedGeometryEffect(id: "selection", in: namespace)
                             }
                         }
                 }
                 .buttonStyle(.plain)
+                .accessibilityAddTraits(selection == item ? .isSelected : [])
             }
         }
-        .padding(4)
-        .glassEffect(.regular, in: .capsule)
         .haptic(.selection, trigger: selection)
     }
 }

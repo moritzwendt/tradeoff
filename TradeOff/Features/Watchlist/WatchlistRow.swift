@@ -14,31 +14,51 @@ struct WatchlistRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(instrument.symbol)
                     .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
                 Text(instrument.name)
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Sparkline(values: values, color: trend == Theme.textSecondary ? Theme.accent : trend)
-                .frame(width: 52, height: 28)
-            VStack(alignment: .trailing, spacing: 5) {
-                if let quote {
-                    PriceText(value: quote.last, font: .headline)
-                    ChangePill(fraction: quote.changeFraction)
-                } else {
-                    Text("0,00 $")
-                        .font(.headline)
-                        .redacted(reason: .placeholder)
-                    Text("0,00 %")
-                        .font(.caption)
-                        .redacted(reason: .placeholder)
-                }
-            }
-            .frame(width: 112, alignment: .trailing)
+            sparkline(values: values, color: trend == Theme.textSecondary ? Theme.textSecondary : trend)
+                .frame(width: 56, height: 28)
+            priceColumn(quote: quote)
+                .frame(width: 92, alignment: .trailing)
         }
+        .frame(minHeight: Theme.rowHeight)
         .contentShape(.rect)
         .task { await hub.loadSparkline(for: instrument) }
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private func sparkline(values: [Double], color: Color) -> some View {
+        ZStack {
+            if values.count > 1 {
+                Sparkline(values: values, color: color)
+                    .transition(.opacity)
+            } else {
+                SkeletonBar(width: 56, height: 18)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.3), value: values.count > 1)
+    }
+
+    @ViewBuilder
+    private func priceColumn(quote: Quote?) -> some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            if let quote {
+                PriceText(value: quote.last, font: .headline)
+                    .foregroundStyle(Theme.textPrimary)
+                ChangeText(fraction: quote.changeFraction)
+            } else {
+                SkeletonBar(width: 70, height: 16)
+                SkeletonBar(width: 48, height: 12)
+            }
+        }
+        .animation(.easeOut(duration: 0.25), value: quote == nil)
     }
 
     private func sparkValues(quote: Quote?) -> [Double] {

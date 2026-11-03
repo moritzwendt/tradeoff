@@ -26,13 +26,12 @@ struct InstrumentDetailScreen: View {
         let change = model.rangeChange(in: candles) ?? quote.map { (value: $0.change, fraction: $0.changeFraction) }
 
         ScrollView {
-            VStack(spacing: 16) {
-                ConnectionBanner()
+            VStack(alignment: .leading, spacing: 24) {
                 header(quote: quote, selected: selected, change: change)
-                chartCard(candles: candles, selected: selected, change: change)
-                marketCard(quote: quote)
+                chartSection(candles: candles, selected: selected, change: change)
+                statsSection(quote: quote)
                 if let position = positions.first {
-                    positionCard(position: position, quote: quote)
+                    positionSection(position: position, quote: quote)
                 }
             }
             .padding(.horizontal, Theme.screenPadding)
@@ -49,9 +48,15 @@ struct InstrumentDetailScreen: View {
                     toggleWatchlist()
                 } label: {
                     Image(systemName: watchEntries.isEmpty ? "star" : "star.fill")
+                        .foregroundStyle(Theme.textPrimary)
                 }
                 .accessibilityLabel(watchEntries.isEmpty ? "Zur Watchlist" : "Von Watchlist entfernen")
             }
+        }
+        .overlay(alignment: .top) {
+            ConnectionBanner()
+                .padding(.horizontal, Theme.screenPadding)
+                .padding(.top, 4)
         }
         .toolbarVisibility(.hidden, for: .tabBar)
         .safeAreaBar(edge: .bottom) { actionBar }
@@ -66,191 +71,207 @@ struct InstrumentDetailScreen: View {
 
     private func header(quote: Quote?, selected: Candlestick?, change: (value: Decimal, fraction: Decimal)?) -> some View {
         let session = MarketCalendars().session(for: instrument.assetClass, at: Date())
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 12) {
-                AssetIcon(instrument: instrument, size: 44)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(instrument.name)
-                        .font(.title3.weight(.semibold))
-                    Text([instrument.assetClass.singularTitle, instrument.network].compactMap { $0 }.joined(separator: " · "))
+        let subtitle = [instrument.assetClass.singularTitle, instrument.network].compactMap { $0 }.joined(separator: " · ")
+        return VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(instrument.name)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                HStack(spacing: 10) {
+                    Text(subtitle)
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 6) {
-                    if let quote {
-                        QualityBadge(quality: quote.quality)
+                    if instrument.assetClass.calendarKind == .usEquities {
+                        MarketSessionBadge(session: session)
                     }
-                    MarketSessionBadge(session: session)
                 }
             }
 
             if let price = selected?.close ?? quote?.last {
-                PriceText(value: price, font: .system(size: 46, weight: .bold, design: .rounded))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
+                PriceText(value: price, font: .system(size: 40, weight: .semibold))
+                    .foregroundStyle(Theme.textPrimary)
             } else {
-                Text("0,00 $")
-                    .font(.system(size: 46, weight: .bold, design: .rounded))
-                    .redacted(reason: .placeholder)
+                SkeletonBar(width: 190, height: 40)
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 if let selected {
                     Text(TimeFormat.detail(selected.time, range: model.range))
-                        .font(.subheadline.weight(.medium))
+                        .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
                 } else if let change {
-                    ChangePill(fraction: change.fraction)
                     Text(PriceFormatter.change(change.value))
-                        .font(.subheadline.weight(.medium))
                         .monospacedDigit()
-                        .foregroundStyle(Theme.pnl(change.value))
+                    Text(PriceFormatter.percent(change.fraction))
+                        .monospacedDigit()
+                } else {
+                    SkeletonBar(width: 120, height: 16)
                 }
             }
-            .frame(minHeight: 28)
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(selected == nil ? Theme.pnl(change?.value ?? 0) : Theme.textSecondary)
+            .frame(minHeight: 22)
         }
-        .padding(.horizontal, 4)
     }
 
-    private func chartCard(candles: [Candlestick], selected: Candlestick?, change: (value: Decimal, fraction: Decimal)?) -> some View {
+    private func chartSection(candles: [Candlestick], selected: Candlestick?, change: (value: Decimal, fraction: Decimal)?) -> some View {
         @Bindable var bindableModel = model
-        let tint = Theme.pnl(change?.value ?? 0) == Theme.textSecondary ? Theme.accent : Theme.pnl(change?.value ?? 0)
-        return GlassCard(padding: 14) {
-            VStack(spacing: 14) {
-                HStack {
-                    if let selected, settings.values.chartStyle == .candles {
-                        CandleInfoRow(candle: selected)
-                    } else {
-                        Spacer(minLength: 0)
-                    }
-                    ChartStyleToggle()
+        let tint = Theme.pnl(change?.value ?? 0)
+        let color = tint == Theme.textSecondary ? Theme.textPrimary : tint
+        return VStack(spacing: 12) {
+            HStack {
+                if let selected, settings.values.chartStyle == .candles {
+                    CandleInfoRow(candle: selected)
+                } else {
+                    Spacer(minLength: 0)
                 }
-                .frame(minHeight: 36)
+                ChartStyleToggle()
+            }
+            .frame(minHeight: 34)
 
-                ZStack {
-                    if candles.isEmpty {
-                        if model.isLoading {
-                            ProgressView()
-                        } else if model.loadFailed {
-                            VStack(spacing: 12) {
-                                Image(systemName: "chart.line.uptrend.xyaxis")
-                                    .font(.largeTitle)
-                                    .foregroundStyle(Theme.textTertiary)
-                                Text("Verlauf nicht verfügbar")
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(Theme.textSecondary)
-                                Button("Erneut laden") {
-                                    Task { await model.load(using: hub) }
-                                }
-                                .buttonStyle(.glass)
-                            }
-                        } else {
+            ZStack {
+                if candles.isEmpty {
+                    if model.isLoading {
+                        SkeletonBar(height: 220)
+                    } else if model.loadFailed {
+                        VStack(spacing: 12) {
                             Image(systemName: "chart.line.uptrend.xyaxis")
                                 .font(.largeTitle)
                                 .foregroundStyle(Theme.textTertiary)
+                            Text("Verlauf nicht verfügbar")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Theme.textSecondary)
+                            Button("Erneut laden") {
+                                Task { await model.load(using: hub) }
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.textPrimary)
+                            .padding(.horizontal, 16)
+                            .frame(minHeight: 40)
+                            .background(Theme.surfaceRaised, in: .capsule)
+                            .buttonStyle(.plain)
                         }
                     } else {
-                        PriceChart(
-                            candles: candles,
-                            style: settings.values.chartStyle,
-                            range: model.range,
-                            tint: tint,
-                            selectedIndex: $bindableModel.selectedIndex
-                        )
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .font(.largeTitle)
+                            .foregroundStyle(Theme.textTertiary)
                     }
-                }
-                .frame(height: 260)
-
-                SegmentedControl(items: ChartRange.allCases, selection: $bindableModel.range) { $0.title }
-            }
-        }
-    }
-
-    private func marketCard(quote: Quote?) -> some View {
-        GlassCard {
-            VStack(spacing: 0) {
-                if let quote {
-                    StatRow(title: "Geld", value: PriceFormatter.price(quote.bid))
-                    StatDivider()
-                    StatRow(title: "Brief", value: PriceFormatter.price(quote.ask))
-                    StatDivider()
-                    StatRow(title: "Spread", value: PriceFormatter.percent(quote.spreadFraction, signed: false))
-                    StatDivider()
-                    if let high = quote.dayHigh, let low = quote.dayLow {
-                        StatRow(title: "Hoch 24h", value: PriceFormatter.price(high))
-                        StatDivider()
-                        StatRow(title: "Tief 24h", value: PriceFormatter.price(low))
-                        StatDivider()
-                    }
-                    StatRow(title: "Vor 24h", value: PriceFormatter.price(quote.previousClose))
-                    if let liquidity = quote.liquidityUSD {
-                        StatDivider()
-                        StatRow(title: "Liquidität", value: PriceFormatter.compactMoney(liquidity))
-                    }
-                    StatDivider()
-                    StatRow(title: "Quelle", value: quote.source.displayName)
                 } else {
-                    StatRow(title: "Geld", value: "0,00 $").redacted(reason: .placeholder)
-                    StatDivider()
-                    StatRow(title: "Brief", value: "0,00 $").redacted(reason: .placeholder)
+                    PriceChart(
+                        candles: candles,
+                        style: settings.values.chartStyle,
+                        range: model.range,
+                        tint: color,
+                        selectedIndex: $bindableModel.selectedIndex
+                    )
+                    .transition(.opacity)
+                }
+            }
+            .frame(height: 260)
+            .animation(.easeOut(duration: 0.25), value: candles.isEmpty)
+
+            SegmentedControl(items: ChartRange.allCases, selection: $bindableModel.range) { $0.title }
+        }
+    }
+
+    private func statsSection(quote: Quote?) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "Kennzahlen")
+            Card {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)], alignment: .leading, spacing: 18) {
+                    if let quote {
+                        ForEach(stats(for: quote), id: \.0) { stat in
+                            statCell(stat.0, stat.1)
+                        }
+                    } else {
+                        ForEach(0..<6, id: \.self) { _ in
+                            VStack(alignment: .leading, spacing: 6) {
+                                SkeletonBar(width: 56, height: 11)
+                                SkeletonBar(width: 90, height: 15)
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
-    private func positionCard(position: PositionRecord, quote: Quote?) -> some View {
+    private func stats(for quote: Quote) -> [(String, String)] {
+        var items: [(String, String)] = [
+            ("Geld", PriceFormatter.price(quote.bid)),
+            ("Brief", PriceFormatter.price(quote.ask)),
+            ("Spread", PriceFormatter.percent(quote.spreadFraction, signed: false))
+        ]
+        if let high = quote.dayHigh, let low = quote.dayLow {
+            items.append(("Hoch 24h", PriceFormatter.price(high)))
+            items.append(("Tief 24h", PriceFormatter.price(low)))
+        }
+        items.append(("Vor 24h", PriceFormatter.price(quote.previousClose)))
+        if let liquidity = quote.liquidityUSD {
+            items.append(("Liquidität", PriceFormatter.compactMoney(liquidity)))
+        }
+        items.append(("Quelle", quote.source.displayName))
+        return items
+    }
+
+    private func statCell(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .contentTransition(.numericText())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func positionSection(position: PositionRecord, quote: Quote?) -> some View {
         let price = quote?.bid ?? position.averageCost
         let value = (position.quantity * price).rounded(scale: 2)
         let cost = (position.quantity * position.averageCost).rounded(scale: 2)
         let pnl = value - cost
         let fraction = cost > 0 ? pnl / cost : 0
-        return GlassCard {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Position")
-                    .font(.headline)
-                    .padding(.bottom, 4)
-                StatRow(title: "Menge", value: PriceFormatter.quantity(position.quantity, assetClass: instrument.assetClass))
-                StatDivider()
-                StatRow(title: "Einstand", value: PriceFormatter.price(position.averageCost))
-                StatDivider()
-                StatRow(title: "Wert", value: PriceFormatter.money(value))
-                StatDivider()
-                StatRow(
-                    title: "Gewinn und Verlust",
-                    value: "\(PriceFormatter.money(pnl, signed: true))  \(PriceFormatter.percent(fraction))",
-                    valueColor: Theme.pnl(pnl)
-                )
+        return VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "Position")
+            Card {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)], alignment: .leading, spacing: 18) {
+                    statCell("Menge", PriceFormatter.quantity(position.quantity, assetClass: instrument.assetClass))
+                    statCell("Einstand", PriceFormatter.price(position.averageCost))
+                    statCell("Wert", PriceFormatter.money(value))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Gewinn und Verlust")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textSecondary)
+                        Text("\(PriceFormatter.money(pnl, signed: true)) \(PriceFormatter.percent(fraction))")
+                            .font(.subheadline.weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(Theme.pnl(pnl))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
         }
     }
 
     private var actionBar: some View {
-        GlassEffectContainer(spacing: 12) {
-            HStack(spacing: 12) {
-                Button {
+        HStack(spacing: 12) {
+            if !positions.isEmpty {
+                Button(OrderSide.sell.title) {
                     ticketSide = .sell
-                } label: {
-                    Text(OrderSide.sell.title)
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
                 }
-                .buttonStyle(.glassProminent)
-                .tint(Theme.negative)
-                .disabled(positions.isEmpty)
-
-                Button {
-                    ticketSide = .buy
-                } label: {
-                    Text(OrderSide.buy.title)
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                }
-                .buttonStyle(.glassProminent)
-                .tint(Theme.positive)
+                .buttonStyle(.filled(Theme.surfaceRaised, foreground: Theme.negative))
             }
+            Button(OrderSide.buy.title) {
+                ticketSide = .buy
+            }
+            .buttonStyle(.filled(Theme.positive))
         }
         .padding(.horizontal, Theme.screenPadding)
         .padding(.bottom, 8)
@@ -277,7 +298,9 @@ private struct ChartStyleToggle: View {
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textSecondary)
         }
-        .frame(width: 96)
+        .frame(width: 88)
+        .padding(2)
+        .background(Theme.surface, in: .capsule)
         .accessibilityLabel("Chartstil")
     }
 }

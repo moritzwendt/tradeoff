@@ -10,27 +10,12 @@ struct Sparkline: View {
             ZStack {
                 if points.count > 1 {
                     Path { path in
-                        path.move(to: CGPoint(x: points[0].x, y: proxy.size.height))
-                        for point in points {
-                            path.addLine(to: point)
-                        }
-                        path.addLine(to: CGPoint(x: points[points.count - 1].x, y: proxy.size.height))
-                        path.closeSubpath()
-                    }
-                    .fill(
-                        LinearGradient(
-                            colors: [color.opacity(0.22), color.opacity(0)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    Path { path in
                         path.move(to: points[0])
                         for point in points.dropFirst() {
                             path.addLine(to: point)
                         }
                     }
-                    .stroke(color, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+                    .stroke(color, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
                 }
             }
         }

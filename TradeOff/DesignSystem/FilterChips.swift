@@ -7,30 +7,27 @@ struct FilterChips<Item: Hashable & Identifiable>: View {
 
     var body: some View {
         ScrollView(.horizontal) {
-            GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 8) {
-                    ForEach(items) { item in
-                        let isSelected = selection == item
-                        Button {
-                            withAnimation(.snappy(duration: 0.25)) {
-                                selection = item
-                            }
-                        } label: {
-                            Text(title(item))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textSecondary)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
+            HStack(spacing: 8) {
+                ForEach(items) { item in
+                    let isSelected = selection == item
+                    Button {
+                        withAnimation(.snappy(duration: 0.2)) {
+                            selection = item
                         }
-                        .buttonStyle(.plain)
-                        .glassEffect(
-                            isSelected ? Glass.regular.tint(Theme.accent.opacity(0.45)).interactive() : Glass.regular.interactive(),
-                            in: .capsule
-                        )
+                    } label: {
+                        Text(title(item))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(isSelected ? Color.black : Theme.textSecondary)
+                            .padding(.horizontal, 14)
+                            .frame(minHeight: 36)
+                            .background(isSelected ? Color.white.opacity(0.92) : Theme.surface, in: .capsule)
+                            .contentShape(.capsule)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
-                .padding(.horizontal, Theme.screenPadding)
             }
+            .padding(.horizontal, Theme.screenPadding)
         }
         .scrollIndicators(.hidden)
         .haptic(.selection, trigger: selection)

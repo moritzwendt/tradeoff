@@ -5,19 +5,13 @@ struct AssetIcon: View {
     var size: CGFloat = 40
 
     var body: some View {
-        let tint = Theme.tint(for: instrument.assetClass)
-        Text(String(instrument.symbol.prefix(2)))
-            .font(.system(size: size * 0.36, weight: .bold, design: .rounded))
-            .foregroundStyle(.white)
+        Text(String(instrument.symbol.prefix(instrument.symbol.count > 3 ? 2 : 3)))
+            .font(.system(size: size * 0.30, weight: .semibold))
+            .foregroundStyle(Theme.textPrimary)
+            .minimumScaleFactor(0.6)
+            .lineLimit(1)
             .frame(width: size, height: size)
-            .background(
-                LinearGradient(
-                    colors: [tint.opacity(0.95), tint.opacity(0.45)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                in: .circle
-            )
-            .overlay(Circle().strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5))
+            .background(Theme.surfaceRaised, in: .circle)
+            .accessibilityHidden(true)
     }
 }

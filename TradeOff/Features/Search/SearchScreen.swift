@@ -5,8 +5,11 @@ struct SearchScreen: View {
     @Environment(QuoteHub.self) private var hub
     @Environment(\.modelContext) private var context
     @Query private var entries: [WatchlistEntry]
+    @AppStorage(RecentSearches.storageKey) private var recentsText = ""
     @State private var query = ""
     @State private var results: [Instrument] = []
+    @State private var suggestions: [Instrument] = []
+    @State private var isSearching = false
 
     private struct Group: Identifiable {
         let assetClass: AssetClass
@@ -15,57 +18,101 @@ struct SearchScreen: View {
         var id: AssetClass { assetClass }
     }
 
-    private var groups: [Group] {
+    private var trimmedQuery: String {
+        query.trimmingCharacters(in: .whitespaces)
+    }
+
+    private var recents: [Instrument] {
+        RecentSearches.decode(recentsText)
+    }
+
+    private func groups(of instruments: [Instrument]) -> [Group] {
         AssetClass.allCases.compactMap { assetClass in
-            let items = results.filter { $0.assetClass == assetClass }
+            let items = instruments.filter { $0.assetClass == assetClass }
             return items.isEmpty ? nil : Group(assetClass: assetClass, instruments: items)
         }
     }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 18) {
-                    if results.isEmpty, !query.isEmpty {
-                        ContentUnavailableView.search(text: query)
-                            .padding(.top, 40)
-                    }
-                    ForEach(groups) { group in
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(group.assetClass.title)
-                                .font(.title3.weight(.bold))
-                                .padding(.horizontal, 6)
-                            GlassCard(padding: 0) {
-                                VStack(spacing: 0) {
-                                    ForEach(group.instruments) { instrument in
-                                        row(instrument)
-                                        if instrument.id != group.instruments.last?.id {
-                                            StatDivider().padding(.leading, 68)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+            List {
+                if trimmedQuery.isEmpty {
+                    idleContent
+                } else {
+                    resultContent
                 }
-                .padding(.horizontal, Theme.screenPadding)
-                .padding(.top, 4)
-                .padding(.bottom, 24)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             .scrollIndicators(.hidden)
             .background(AppBackground())
             .navigationTitle("Suche")
-            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Suchen")
+            .searchable(text: $query, prompt: "Suchen")
             .navigationDestination(for: Instrument.self) { InstrumentDetailScreen(instrument: $0) }
-            .task(id: query) {
-                try? await Task.sleep(for: .milliseconds(180))
-                guard !Task.isCancelled else { return }
-                let found = query.trimmingCharacters(in: .whitespaces).isEmpty
-                    ? await hub.catalog()
-                    : await hub.search(query)
-                results = found
+            .task { suggestions = await hub.catalog() }
+            .task(id: trimmedQuery) { await runSearch() }
+        }
+    }
+
+    @ViewBuilder
+    private var idleContent: some View {
+        if !recents.isEmpty {
+            Section {
+                ForEach(recents) { row($0) }
+            } header: {
+                header("Zuletzt gesucht") {
+                    Button("Leeren") { recentsText = "" }
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .listSectionSeparator(.hidden)
+        }
+        ForEach(groups(of: suggestions)) { group in
+            Section {
+                ForEach(group.instruments) { row($0) }
+            } header: {
+                header(group.assetClass.title) { EmptyView() }
+            }
+            .listSectionSeparator(.hidden)
+        }
+    }
+
+    @ViewBuilder
+    private var resultContent: some View {
+        if isSearching && results.isEmpty {
+            HStack {
+                Spacer()
+                ProgressView()
+                Spacer()
+            }
+            .padding(.top, 40)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        } else if results.isEmpty {
+            ContentUnavailableView.search(text: trimmedQuery)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .padding(.top, 40)
+        } else {
+            ForEach(groups(of: results)) { group in
+                Section {
+                    ForEach(group.instruments) { row($0) }
+                } header: {
+                    header(group.assetClass.title) { EmptyView() }
+                }
+                .listSectionSeparator(.hidden)
             }
         }
+    }
+
+    private func header<Trailing: View>(_ title: String, @ViewBuilder trailing: () -> Trailing) -> some View {
+        HStack {
+            SectionHeader(title: title)
+            trailing()
+        }
+        .textCase(nil)
+        .padding(.top, 8)
     }
 
     private func row(_ instrument: Instrument) -> some View {
@@ -77,6 +124,7 @@ struct SearchScreen: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(instrument.symbol)
                             .font(.headline)
+                            .foregroundStyle(Theme.textPrimary)
                         Text([instrument.name, instrument.network].compactMap { $0 }.joined(separator: " · "))
                             .font(.subheadline)
                             .foregroundStyle(Theme.textSecondary)
@@ -84,25 +132,47 @@ struct SearchScreen: View {
                     }
                     Spacer(minLength: 8)
                 }
+                .frame(minHeight: Theme.rowHeight)
                 .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .navigationLinkIndicatorVisibility(.hidden)
+            .simultaneousGesture(TapGesture().onEnded { remember(instrument) })
 
             Button {
                 toggle(instrument)
             } label: {
                 Image(systemName: isWatched ? "star.fill" : "star")
                     .font(.title3)
-                    .foregroundStyle(isWatched ? Theme.simulation : Theme.textSecondary)
-                    .frame(width: 40, height: 40)
+                    .foregroundStyle(isWatched ? Theme.textPrimary : Theme.textSecondary)
+                    .frame(width: 44, height: 44)
                     .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(isWatched ? "Von Watchlist entfernen" : "Zur Watchlist")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .listRowBackground(Color.clear)
+        .listRowSeparatorTint(Theme.separator)
+        .listRowInsets(EdgeInsets(top: 0, leading: Theme.screenPadding, bottom: 0, trailing: 8))
         .haptic(.selection, trigger: isWatched)
+    }
+
+    private func runSearch() async {
+        guard !trimmedQuery.isEmpty else {
+            results = []
+            isSearching = false
+            return
+        }
+        isSearching = true
+        try? await Task.sleep(for: .milliseconds(250))
+        guard !Task.isCancelled else { return }
+        let found = await hub.search(trimmedQuery)
+        guard !Task.isCancelled else { return }
+        results = found
+        isSearching = false
+    }
+
+    private func remember(_ instrument: Instrument) {
+        recentsText = RecentSearches.encode(RecentSearches.adding(instrument, to: recents))
     }
 
     private func toggle(_ instrument: Instrument) {
@@ -110,6 +180,7 @@ struct SearchScreen: View {
             context.delete(entry)
         } else {
             context.insert(WatchlistEntry(instrument: instrument, sortIndex: entries.count))
+            remember(instrument)
         }
         try? context.save()
     }

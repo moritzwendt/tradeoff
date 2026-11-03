@@ -42,12 +42,12 @@ struct PriceChart: View {
                         yEnd: .value("Preis", point.close)
                     )
                     .foregroundStyle(
-                        LinearGradient(colors: [tint.opacity(0.30), tint.opacity(0)], startPoint: .top, endPoint: .bottom)
+                        LinearGradient(colors: [tint.opacity(0.18), tint.opacity(0)], startPoint: .top, endPoint: .bottom)
                     )
                     .interpolationMethod(.monotone)
                     LineMark(x: .value("Zeit", point.x), y: .value("Preis", point.close))
                         .foregroundStyle(tint)
-                        .lineStyle(StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
+                        .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                         .interpolationMethod(.monotone)
                 }
             } else {

@@ -4,72 +4,119 @@ struct SettingsScreen: View {
     @Environment(AppSettings.self) private var settings
     @Environment(AppEnvironment.self) private var environment
     @Environment(QuoteHub.self) private var hub
+    @Environment(\.dismiss) private var dismiss
     @State private var confirmReset = false
 
     var body: some View {
         @Bindable var settings = settings
 
         NavigationStack {
-            Form {
-                AccountSection(values: $settings.values) { confirmReset = true }
-                FeesSection(
-                    values: $settings.values,
-                    classes: AssetClass.allCases.filter { hub.registry.activeAssetClasses.contains($0) }
-                )
-                TradingSection(values: $settings.values)
-                DisplaySection(values: $settings.values)
-                providersSection
-                resetSection
-                aboutSection
+            List {
+                Section("Konto") {
+                    LabeledContent("Startguthaben") {
+                        DecimalField(value: $settings.values.startingBalance, suffix: "$", maximumFractionDigits: 2)
+                    }
+                    Button("Konto zurücksetzen", role: .destructive) {
+                        confirmReset = true
+                    }
+                }
+                .listRowBackground(Theme.surface)
+
+                Section("Handel") {
+                    Toggle("Marktzeiten ignorieren", isOn: $settings.values.ignoreMarketHours)
+                        .tint(Theme.positive)
+                    Stepper(value: $settings.values.maxQuoteAge, in: 5...300, step: 5) {
+                        LabeledContent("Max. Kursalter", value: PriceFormatter.seconds(settings.values.maxQuoteAge))
+                    }
+                    NavigationLink("Gebühren") {
+                        FeesScreen(values: $settings.values, classes: activeClasses)
+                    }
+                }
+                .listRowBackground(Theme.surface)
+
+                Section("Darstellung") {
+                    Picker("Chartstil", selection: $settings.values.chartStyle) {
+                        ForEach(ChartStyle.allCases) { style in
+                            Text(style.title).tag(style)
+                        }
+                    }
+                    Toggle("Haptik", isOn: $settings.values.hapticsEnabled)
+                        .tint(Theme.positive)
+                }
+                .listRowBackground(Theme.surface)
+
+                Section("Datenquellen") {
+                    ForEach(ProviderID.allCases) { provider in
+                        sourceRow(provider)
+                    }
+                }
+                .listRowBackground(Theme.surface)
+
+                Section("Info") {
+                    LabeledContent("Version", value: appVersion)
+                    Button("Einstellungen zurücksetzen") {
+                        settings.reset()
+                    }
+                }
+                .listRowBackground(Theme.surface)
             }
             .scrollContentBackground(.hidden)
             .scrollDismissesKeyboard(.interactively)
             .background(AppBackground())
             .navigationTitle("Einstellungen")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Fertig") { dismiss() }
+                }
+            }
             .confirmationDialog("Konto zurücksetzen", isPresented: $confirmReset, titleVisibility: .visible) {
                 Button("Zurücksetzen", role: .destructive) {
                     environment.resetAccount()
                 }
             }
         }
+        .presentationDragIndicator(.visible)
     }
 
-    private var providersSection: some View {
-        Section("Datenquellen") {
-            ForEach(ProviderID.allCases) { provider in
-                let availability = hub.registry.availability(for: provider)
-                HStack {
-                    Text(provider.displayName)
-                    Spacer()
-                    Text(availability.title)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(availability == .ready ? Theme.positive : Theme.textSecondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(
-                            (availability == .ready ? Theme.positive : Color.white).opacity(0.12),
-                            in: .capsule
-                        )
-                }
-            }
-        }
-        .listRowBackground(Theme.fill)
+    private var activeClasses: [AssetClass] {
+        AssetClass.allCases.filter { hub.registry.activeAssetClasses.contains($0) }
     }
 
-    private var resetSection: some View {
-        Section {
-            Button("Einstellungen zurücksetzen") {
-                settings.reset()
-            }
+    private func sourceRow(_ provider: ProviderID) -> some View {
+        let availability = hub.registry.availability(for: provider)
+        let isReady = availability == .ready
+        let status = hub.statuses[provider]
+        return HStack(spacing: 10) {
+            Text(provider.displayName)
+            Spacer(minLength: 8)
+            Circle()
+                .fill(color(isReady: isReady, status: status))
+                .frame(width: 8, height: 8)
+            Text(text(availability: availability, status: status))
+                .foregroundStyle(Theme.textSecondary)
         }
-        .listRowBackground(Theme.fill)
+        .accessibilityElement(children: .combine)
     }
 
-    private var aboutSection: some View {
-        Section("Info") {
-            LabeledContent("Version", value: appVersion)
+    private func color(isReady: Bool, status: ProviderStatus?) -> Color {
+        guard isReady else { return Theme.textTertiary }
+        switch status {
+        case .reconnecting: return Theme.warning
+        case .failed: return Theme.negative
+        case .connecting, .idle: return Theme.textSecondary
+        default: return Theme.positive
         }
-        .listRowBackground(Theme.fill)
+    }
+
+    private func text(availability: ProviderAvailability, status: ProviderStatus?) -> String {
+        guard availability == .ready else { return availability.title }
+        switch status {
+        case .reconnecting: return "Neuaufbau"
+        case .failed: return "Fehler"
+        case .connecting: return "Verbindet"
+        default: return "Aktiv"
+        }
     }
 
     private var appVersion: String {
@@ -79,43 +126,29 @@ struct SettingsScreen: View {
     }
 }
 
-private struct AccountSection: View {
-    @Binding var values: SettingsValues
-    let onReset: () -> Void
-
-    var body: some View {
-        Section("Konto") {
-            LabeledContent("Startguthaben") {
-                DecimalField(value: $values.startingBalance, suffix: "$", maximumFractionDigits: 2)
-            }
-            Button("Konto zurücksetzen", role: .destructive, action: onReset)
-        }
-        .listRowBackground(Theme.fill)
-    }
-}
-
-private struct FeesSection: View {
+struct FeesScreen: View {
     @Binding var values: SettingsValues
     let classes: [AssetClass]
 
     var body: some View {
-        Section("Gebühren Anteil") {
+        List {
             ForEach(classes) { assetClass in
-                LabeledContent(assetClass.singularTitle) {
-                    DecimalField(value: percentBinding(assetClass), suffix: "%", maximumFractionDigits: 3)
+                Section(assetClass.singularTitle) {
+                    LabeledContent("Anteil") {
+                        DecimalField(value: percentBinding(assetClass), suffix: "%", maximumFractionDigits: 3)
+                    }
+                    LabeledContent("Pauschale") {
+                        DecimalField(value: flatBinding(assetClass), suffix: "$", maximumFractionDigits: 2)
+                    }
                 }
+                .listRowBackground(Theme.surface)
             }
         }
-        .listRowBackground(Theme.fill)
-
-        Section("Gebühren Pauschale") {
-            ForEach(classes) { assetClass in
-                LabeledContent(assetClass.singularTitle) {
-                    DecimalField(value: flatBinding(assetClass), suffix: "$", maximumFractionDigits: 2)
-                }
-            }
-        }
-        .listRowBackground(Theme.fill)
+        .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+        .background(AppBackground())
+        .navigationTitle("Gebühren")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private func percentBinding(_ assetClass: AssetClass) -> Binding<Decimal> {
@@ -138,35 +171,5 @@ private struct FeesSection: View {
                 values.fees.setRule(rule, for: assetClass)
             }
         )
-    }
-}
-
-private struct TradingSection: View {
-    @Binding var values: SettingsValues
-
-    var body: some View {
-        Section("Handel") {
-            Toggle("Marktzeiten ignorieren", isOn: $values.ignoreMarketHours)
-            Stepper(value: $values.maxQuoteAge, in: 5...300, step: 5) {
-                LabeledContent("Max. Kursalter", value: PriceFormatter.seconds(values.maxQuoteAge))
-            }
-        }
-        .listRowBackground(Theme.fill)
-    }
-}
-
-private struct DisplaySection: View {
-    @Binding var values: SettingsValues
-
-    var body: some View {
-        Section("Darstellung") {
-            Picker("Chartstil", selection: $values.chartStyle) {
-                ForEach(ChartStyle.allCases) { style in
-                    Text(style.title).tag(style)
-                }
-            }
-            Toggle("Haptik", isOn: $values.hapticsEnabled)
-        }
-        .listRowBackground(Theme.fill)
     }
 }

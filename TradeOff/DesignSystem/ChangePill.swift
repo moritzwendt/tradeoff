@@ -12,13 +12,29 @@ struct ChangePill: View {
                 .monospacedDigit()
                 .contentTransition(.numericText(value: fraction.doubleValue))
         }
-        .font(.caption.weight(.semibold))
+        .font(.footnote.weight(.semibold))
         .foregroundStyle(color)
         .lineLimit(1)
         .fixedSize(horizontal: true, vertical: false)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(color.opacity(0.15), in: .capsule)
+        .background(color.opacity(0.14), in: .rect(cornerRadius: 8, style: .continuous))
         .animation(.snappy(duration: 0.25), value: fraction)
+    }
+}
+
+struct ChangeText: View {
+    let fraction: Decimal
+    var font: Font = .subheadline.weight(.medium)
+
+    var body: some View {
+        Text(PriceFormatter.percent(fraction))
+            .font(font)
+            .monospacedDigit()
+            .foregroundStyle(Theme.pnl(fraction))
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .contentTransition(.numericText(value: fraction.doubleValue))
+            .animation(.snappy(duration: 0.25), value: fraction)
     }
 }

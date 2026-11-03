@@ -5,7 +5,6 @@ enum AppTab: Hashable {
     case markets
     case portfolio
     case history
-    case settings
     case search
 }
 
@@ -23,25 +22,30 @@ struct RootView: View {
     }
 
     var body: some View {
-        TabView(selection: $selection) {
-            Tab("Märkte", systemImage: "chart.line.uptrend.xyaxis", value: AppTab.markets) {
-                WatchlistScreen()
+        ZStack {
+            TabView(selection: $selection) {
+                Tab("Märkte", systemImage: "chart.line.uptrend.xyaxis", value: AppTab.markets) {
+                    WatchlistScreen()
+                }
+                Tab("Portfolio", systemImage: "chart.pie", value: AppTab.portfolio) {
+                    PortfolioScreen()
+                }
+                Tab("Verlauf", systemImage: "clock.arrow.circlepath", value: AppTab.history) {
+                    HistoryScreen()
+                }
+                Tab(value: AppTab.search, role: .search) {
+                    SearchScreen()
+                }
             }
-            Tab("Portfolio", systemImage: "chart.pie", value: AppTab.portfolio) {
-                PortfolioScreen()
-            }
-            Tab("Verlauf", systemImage: "clock.arrow.circlepath", value: AppTab.history) {
-                HistoryScreen()
-            }
-            Tab("Einstellungen", systemImage: "gearshape", value: AppTab.settings) {
-                SettingsScreen()
-            }
-            Tab(value: AppTab.search, role: .search) {
-                SearchScreen()
+
+            if !environment.isReady {
+                LaunchView()
+                    .transition(.opacity)
+                    .zIndex(1)
             }
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
-        .task { await environment.prepare() }
+        .animation(.easeOut(duration: 0.3), value: environment.isReady)
+        .task { await environment.bootstrap() }
         .task(id: watchedInstruments.map(\.id)) {
             hub.setBaseline(watchedInstruments)
         }
