@@ -75,8 +75,33 @@ struct USEquityCalendar: MarketCalendar {
         calendar.date(bySettingHour: 9, minute: 30, second: 0, of: day)
     }
 
+    func isEarlyClose(_ day: Date) -> Bool {
+        guard isTradingDay(day) else { return false }
+        let year = calendar.component(.year, from: day)
+        return earlyCloseDays(in: year).contains(calendar.startOfDay(for: day))
+    }
+
+    func earlyCloseDays(in year: Int) -> Set<Date> {
+        var days: [Date?] = []
+        if let thanksgiving = nthWeekday(ordinal: 4, weekday: 5, month: 11, year: year) {
+            days.append(calendar.date(byAdding: .day, value: 1, to: thanksgiving))
+        }
+        if let christmasEve = calendar.date(from: DateComponents(year: year, month: 12, day: 24)) {
+            days.append(christmasEve)
+        }
+        if let july3 = calendar.date(from: DateComponents(year: year, month: 7, day: 3)),
+           let july4 = calendar.date(from: DateComponents(year: year, month: 7, day: 4)) {
+            let weekday = calendar.component(.weekday, from: july4)
+            if weekday != 1, weekday != 7 {
+                days.append(july3)
+            }
+        }
+        return Set(days.compactMap { $0 }.map { calendar.startOfDay(for: $0) })
+    }
+
     private func sessionClose(on day: Date) -> Date? {
-        calendar.date(bySettingHour: 16, minute: 0, second: 0, of: day)
+        let hour = isEarlyClose(day) ? 13 : 16
+        return calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day)
     }
 
     private func nextOpen(after day: Date) -> Date? {

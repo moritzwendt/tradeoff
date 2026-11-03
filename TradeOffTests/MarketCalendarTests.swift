@@ -77,4 +77,37 @@ struct MarketCalendarTests {
         #expect(!calendars.session(for: .stock, at: saturday).isOpen)
         #expect(!calendars.session(for: .etf, at: saturday).isOpen)
     }
+
+    @Test func dayAfterThanksgivingClosesAtOne() {
+        #expect(calendar.session(at: date(2026, 11, 27, 12, 59)) == .open(closesAt: date(2026, 11, 27, 13, 0)))
+        #expect(calendar.session(at: date(2026, 11, 27, 13, 0)) == .closed(opensAt: date(2026, 11, 30, 9, 30)))
+    }
+
+    @Test func christmasEveClosesEarlyOnWeekdays() {
+        #expect(calendar.session(at: date(2026, 12, 24, 12, 0)) == .open(closesAt: date(2026, 12, 24, 13, 0)))
+        #expect(!calendar.session(at: date(2026, 12, 24, 14, 0)).isOpen)
+        #expect(calendar.session(at: date(2024, 12, 24, 12, 0)) == .open(closesAt: date(2024, 12, 24, 13, 0)))
+    }
+
+    @Test func christmasEveOnAWeekendOrObservedHolidayHasNoEarlyClose() {
+        #expect(!calendar.isEarlyClose(date(2022, 12, 24)))
+        #expect(!calendar.isEarlyClose(date(2027, 12, 24)))
+        #expect(!calendar.session(at: date(2027, 12, 24, 11, 0)).isOpen)
+    }
+
+    @Test func julyThirdClosesEarlyWhenJulyFourthIsAWeekday() {
+        #expect(calendar.session(at: date(2025, 7, 3, 12, 30)) == .open(closesAt: date(2025, 7, 3, 13, 0)))
+        #expect(calendar.session(at: date(2023, 7, 3, 12, 30)) == .open(closesAt: date(2023, 7, 3, 13, 0)))
+        #expect(!calendar.session(at: date(2025, 7, 3, 13, 30)).isOpen)
+    }
+
+    @Test func julyThirdIsAFullHolidayWhenJulyFourthIsASaturday() {
+        #expect(!calendar.session(at: date(2026, 7, 3, 11, 0)).isOpen)
+        #expect(calendar.session(at: date(2026, 7, 2, 15, 0)) == .open(closesAt: date(2026, 7, 2, 16, 0)))
+    }
+
+    @Test func regularDaysStillCloseAtFour() {
+        #expect(!calendar.isEarlyClose(date(2026, 11, 4)))
+        #expect(calendar.session(at: date(2026, 11, 4, 15, 0)) == .open(closesAt: date(2026, 11, 4, 16, 0)))
+    }
 }
