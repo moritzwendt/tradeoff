@@ -14,13 +14,18 @@ enum TradeRejection: Error, Equatable, Sendable {
         switch self {
         case .noQuote: "Kein Kurs verfügbar"
         case .staleQuote: "Kurs ist zu alt"
-        case .marketClosed: "Markt geschlossen"
+        case .marketClosed(let session): Self.closedMessage(session)
         case .invalidQuantity: "Menge eingeben"
         case .belowMinimum: "Order zu klein"
         case .insufficientFunds: "Nicht genug Guthaben"
         case .insufficientPosition: "Nicht genug Bestand"
         case .noLiquidityData: "Keine Liquiditätsdaten"
         }
+    }
+
+    private static func closedMessage(_ session: MarketSession) -> String {
+        guard case .closed(let opensAt?) = session else { return "Markt geschlossen" }
+        return "Markt geschlossen, öffnet \(TimeFormat.opening(opensAt))"
     }
 
     var blocksPreview: Bool {

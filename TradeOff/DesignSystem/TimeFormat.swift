@@ -23,6 +23,11 @@ enum TimeFormat {
         date.formatted(.dateTime.day().month(.abbreviated).year().hour().minute())
     }
 
+    static func opening(_ date: Date, calendar: Calendar = .current) -> String {
+        if calendar.isDateInToday(date) { return clock(date) }
+        return date.formatted(.dateTime.weekday(.abbreviated).hour().minute())
+    }
+
     static func clock(_ date: Date) -> String {
         date.formatted(.dateTime.hour().minute())
     }

@@ -144,4 +144,17 @@ struct ExecutionModelTests {
         #expect(preview.spreadFraction > 0)
         #expect(preview.isSyntheticSpread)
     }
+
+    @Test func closedMarketMessageMentionsTheNextOpening() {
+        let opening = TestSupport.newYorkDate(2026, 11, 3, 9, 30)
+        let message = TradeRejection.marketClosed(.closed(opensAt: opening)).message
+        #expect(message.hasPrefix("Markt geschlossen, öffnet "))
+        #expect(TradeRejection.marketClosed(.closed(opensAt: nil)).message == "Markt geschlossen")
+    }
+
+    @Test func openingTimeShowsOnlyTheClockForToday() {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = Date()
+        #expect(TimeFormat.opening(now, calendar: calendar) == TimeFormat.clock(now))
+    }
 }

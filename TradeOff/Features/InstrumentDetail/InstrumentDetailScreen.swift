@@ -23,7 +23,7 @@ struct InstrumentDetailScreen: View {
         let quote = hub.quote(for: instrument.id)
         let candles = model.liveCandles(quote: quote)
         let selected = model.selectedIndex.flatMap { candles.indices.contains($0) ? candles[$0] : nil }
-        let change = model.rangeChange(in: candles)
+        let change = model.rangeChange(in: candles) ?? quote.map { (value: $0.change, fraction: $0.changeFraction) }
 
         ScrollView {
             VStack(spacing: 16) {
