@@ -1,6 +1,11 @@
 import Foundation
 
 extension Decimal {
+    init?(apiString: String) {
+        guard let value = Decimal(string: apiString, locale: Locale(identifier: "en_US_POSIX")) else { return nil }
+        self = value
+    }
+
     var doubleValue: Double {
         NSDecimalNumber(decimal: self).doubleValue
     }
