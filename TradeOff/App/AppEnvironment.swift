@@ -11,13 +11,16 @@ final class AppEnvironment {
     let trading: TradingService
     let recorder: EquityCurveRecorder
     let config: AppConfig
+    private(set) var isReady = false
     private let defaults: UserDefaults
+    private let launchTimeout: Duration
 
     init(
         inMemory: Bool = false,
         defaults: UserDefaults = .standard,
         config: AppConfig = AppConfig(),
-        registry: ProviderRegistry? = nil
+        registry: ProviderRegistry? = nil,
+        launchTimeout: Duration = .seconds(4)
     ) throws {
         let container = try PersistenceController.makeContainer(inMemory: inMemory)
         let settings = AppSettings(defaults: defaults)
@@ -27,13 +30,14 @@ final class AppEnvironment {
             FinnhubProvider(apiKey: config.finnhubAPIKey),
             AlpacaProvider(keyID: config.alpacaKeyID, secretKey: config.alpacaSecretKey)
         ])
-        let hub = QuoteHub(registry: registry)
+        let hub = QuoteHub(registry: registry, sparklineStore: inMemory ? nil : .standard)
 
         self.container = container
         self.settings = settings
         self.hub = hub
         self.config = config
         self.defaults = defaults
+        self.launchTimeout = launchTimeout
         trading = TradingService(context: container.mainContext, hub: hub, settings: settings)
         recorder = EquityCurveRecorder(context: container.mainContext, hub: hub)
     }
@@ -49,6 +53,24 @@ final class AppEnvironment {
     func prepare() async {
         _ = trading.account()
         await seedWatchlist()
+    }
+
+    func bootstrap() async {
+        guard !isReady else { return }
+        await prepare()
+        let instruments = watchedInstruments()
+        hub.setBaseline(instruments)
+        Task { await hub.refreshSparklines(instruments) }
+        await hub.waitForQuotes(instruments, timeout: launchTimeout)
+        isReady = true
+    }
+
+    func watchedInstruments() -> [Instrument] {
+        let context = container.mainContext
+        let watched = ((try? context.fetch(FetchDescriptor<WatchlistEntry>(sortBy: [SortDescriptor(\.sortIndex)]))) ?? []).map(\.instrument)
+        let held = ((try? context.fetch(FetchDescriptor<PositionRecord>())) ?? []).map(\.instrument)
+        var seen = Set<InstrumentID>()
+        return (watched + held).filter { seen.insert($0.id).inserted }
     }
 
     func seedWatchlist() async {

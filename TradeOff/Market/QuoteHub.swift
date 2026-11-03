@@ -1,9 +1,17 @@
 import Foundation
 import Observation
 
+enum ConnectionState: Equatable, Sendable {
+    case live
+    case updating
+    case problem
+}
+
 @MainActor
 @Observable
 final class QuoteHub {
+    nonisolated static let problemGrace: TimeInterval = 5
+
     private(set) var quotes: [InstrumentID: Quote] = [:]
     private(set) var sparklines: [InstrumentID: [Double]] = [:]
     private(set) var statuses: [ProviderID: ProviderStatus] = [:]
@@ -15,6 +23,8 @@ final class QuoteHub {
     @ObservationIgnored private var loadingSparklines: Set<InstrumentID> = []
     @ObservationIgnored private var isPaused = false
     @ObservationIgnored private let backoff: Backoff
+    @ObservationIgnored private var degradedSince: [ProviderID: Date] = [:]
+    @ObservationIgnored private let sparklineStore: SparklineStore?
 
     private struct Pin {
         var instrument: Instrument
@@ -26,9 +36,15 @@ final class QuoteHub {
         var task: Task<Void, Never>
     }
 
-    init(registry: ProviderRegistry, backoff: Backoff = Backoff(base: 2, factor: 2, maximum: 30)) {
+    init(
+        registry: ProviderRegistry,
+        backoff: Backoff = Backoff(base: 2, factor: 2, maximum: 30),
+        sparklineStore: SparklineStore? = nil
+    ) {
         self.registry = registry
         self.backoff = backoff
+        self.sparklineStore = sparklineStore
+        sparklines = sparklineStore?.load() ?? [:]
     }
 
     var degradedProviders: [ProviderID] {
@@ -38,8 +54,28 @@ final class QuoteHub {
             .sorted { $0.rawValue < $1.rawValue }
     }
 
+    func problems(at now: Date = Date()) -> [ProviderID] {
+        degradedProviders.filter { now.timeIntervalSince(degradedSince[$0] ?? now) >= Self.problemGrace }
+    }
+
+    func connectionState(at now: Date = Date()) -> ConnectionState {
+        if !problems(at: now).isEmpty { return .problem }
+        let busy = statuses.values.contains { $0 == .connecting || $0.isDegraded }
+        return busy ? .updating : .live
+    }
+
     func quote(for id: InstrumentID) -> Quote? {
         quotes[id]
+    }
+
+    private func setStatus(_ status: ProviderStatus, for id: ProviderID) {
+        let wasDegraded = statuses[id]?.isDegraded ?? false
+        if status.isDegraded, !wasDegraded {
+            degradedSince[id] = Date()
+        } else if !status.isDegraded {
+            degradedSince[id] = nil
+        }
+        statuses[id] = status
     }
 
     func message(for provider: ProviderID) -> String? {
@@ -56,7 +92,7 @@ final class QuoteHub {
         }
         streams = [:]
         for id in degradedProviders {
-            statuses[id] = .connecting
+            setStatus(.connecting, for: id)
         }
         reconcile()
     }
@@ -153,11 +189,44 @@ final class QuoteHub {
     }
 
     func loadSparkline(for instrument: Instrument) async {
-        guard sparklines[instrument.id] == nil, !loadingSparklines.contains(instrument.id) else { return }
+        guard sparklines[instrument.id] == nil else { return }
+        await fetchSparkline(for: instrument)
+        sparklineStore?.save(sparklines)
+    }
+
+    func refreshSparklines(_ instruments: [Instrument], concurrency: Int = 4) async {
+        var pending = instruments[...]
+        await withTaskGroup(of: Void.self) { group in
+            func addNext() {
+                guard let next = pending.popFirst() else { return }
+                group.addTask { await self.fetchSparkline(for: next) }
+            }
+            for _ in 0..<max(concurrency, 1) { addNext() }
+            while await group.next() != nil { addNext() }
+        }
+        sparklineStore?.save(sparklines)
+    }
+
+    func waitForQuotes(_ instruments: [Instrument], timeout: Duration) async {
+        let expected = Set(
+            instruments
+                .filter { registry.availability(for: $0.provider) == .ready }
+                .map(\.id)
+        )
+        guard !expected.isEmpty else { return }
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            if expected.allSatisfy({ quotes[$0] != nil }) { return }
+            try? await Task.sleep(for: .milliseconds(60))
+        }
+    }
+
+    private func fetchSparkline(for instrument: Instrument) async {
+        guard !loadingSparklines.contains(instrument.id) else { return }
         loadingSparklines.insert(instrument.id)
         defer { loadingSparklines.remove(instrument.id) }
-        if let candles = try? await history(for: instrument, range: .day) {
-            sparklines[instrument.id] = candles.map { $0.close.doubleValue }
+        if let candles = try? await history(for: instrument, range: .day), candles.count > 1 {
+            sparklines[instrument.id] = SparklineStore.downsample(candles.map { $0.close.doubleValue })
         }
     }
 
@@ -175,7 +244,7 @@ final class QuoteHub {
         for (id, stream) in streams where grouped[id] == nil {
             stream.task.cancel()
             streams[id] = nil
-            statuses[id] = .idle
+            setStatus(.idle, for: id)
         }
 
         for (id, instruments) in grouped {
@@ -183,7 +252,7 @@ final class QuoteHub {
             if let existing = streams[id], existing.ids == ids { continue }
             streams[id]?.task.cancel()
             guard let provider = registry.provider(for: id) else {
-                statuses[id] = .failed(ProviderError.notImplemented(id).localizedDescription)
+                setStatus(.failed(ProviderError.notImplemented(id).localizedDescription), for: id)
                 continue
             }
             streams[id] = Stream(ids: ids, task: start(provider: provider, instruments: instruments))
@@ -196,12 +265,12 @@ final class QuoteHub {
         return Task { [weak self] in
             var attempt = 0
             while !Task.isCancelled {
-                self?.statuses[id] = attempt == 0 ? .connecting : .reconnecting
+                self?.setStatus(attempt == 0 ? .connecting : .reconnecting, for: id)
                 do {
                     let snapshot = try await provider.snapshot(for: instruments)
                     guard !Task.isCancelled else { return }
                     self?.apply(snapshot)
-                    self?.statuses[id] = .live
+                    self?.setStatus(.live, for: id)
                     attempt = 0
                     let stream = await provider.quotes(for: instruments)
                     for await event in stream {
@@ -211,7 +280,7 @@ final class QuoteHub {
                     return
                 } catch {
                     if Task.isCancelled || error is CancellationError { return }
-                    self?.statuses[id] = .failed(error.localizedDescription)
+                    self?.setStatus(.failed(error.localizedDescription), for: id)
                     let wait = Self.retryDelay(for: error, attempt: attempt, backoff: backoff)
                     try? await Task.sleep(for: .seconds(wait))
                     attempt += 1
@@ -233,7 +302,7 @@ final class QuoteHub {
         case .quote(let quote):
             quotes[quote.instrumentID] = quote
         case .status(let status):
-            statuses[id] = status
+            setStatus(status, for: id)
         }
     }
 

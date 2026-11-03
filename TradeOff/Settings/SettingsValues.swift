@@ -7,6 +7,8 @@ struct SettingsValues: Codable, Equatable, Sendable {
     var maxQuoteAge: Double = 30
     var chartStyle: ChartStyle = .line
     var hapticsEnabled: Bool = true
+    var watchlistSort: WatchlistSort = .manual
+    var groupWatchlist: Bool = true
 
     init() {}
 
@@ -19,5 +21,7 @@ struct SettingsValues: Codable, Equatable, Sendable {
         maxQuoteAge = try container.decodeIfPresent(Double.self, forKey: .maxQuoteAge) ?? defaults.maxQuoteAge
         chartStyle = try container.decodeIfPresent(ChartStyle.self, forKey: .chartStyle) ?? defaults.chartStyle
         hapticsEnabled = try container.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? defaults.hapticsEnabled
+        watchlistSort = try container.decodeIfPresent(WatchlistSort.self, forKey: .watchlistSort) ?? defaults.watchlistSort
+        groupWatchlist = try container.decodeIfPresent(Bool.self, forKey: .groupWatchlist) ?? defaults.groupWatchlist
     }
 }
