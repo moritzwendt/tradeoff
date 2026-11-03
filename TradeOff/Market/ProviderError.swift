@@ -6,6 +6,7 @@ enum ProviderError: Error, Equatable, Sendable {
     case rateLimited(ProviderID, retryAfter: TimeInterval?)
     case invalidResponse(ProviderID)
     case network(ProviderID)
+    case accessDenied(ProviderID)
     case unknownInstrument(InstrumentID)
     case historyUnavailable(InstrumentID)
 }
@@ -18,6 +19,7 @@ extension ProviderError: LocalizedError {
         case .rateLimited(let id, _): "\(id.displayName) Limit erreicht"
         case .invalidResponse(let id): "\(id.displayName) lieferte eine ungültige Antwort"
         case .network(let id): "Keine Verbindung zu \(id.displayName)"
+        case .accessDenied(let id): "Zugriff auf \(id.displayName) verweigert"
         case .unknownInstrument: "Unbekanntes Instrument"
         case .historyUnavailable: "Kein Verlauf verfügbar"
         }

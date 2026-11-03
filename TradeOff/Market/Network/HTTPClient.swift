@@ -79,6 +79,8 @@ struct HTTPClient: Sendable {
         switch response.statusCode {
         case 200..<300:
             return data
+        case 401, 403:
+            throw ProviderError.accessDenied(provider)
         case 418, 429:
             let retryAfter = response.value(forHTTPHeaderField: "Retry-After").flatMap { TimeInterval($0) }
             await limiter?.penalize(for: retryAfter ?? Self.defaultPenalty)

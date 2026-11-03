@@ -114,7 +114,17 @@ actor DexScreenerProvider: PriceProvider {
         let targets = instruments.filter { $0.provider == .dexScreener }
         let (stream, continuation) = AsyncStream.makeStream(of: ProviderEvent.self, bufferingPolicy: .bufferingNewest(256))
         let task = Task { [weak self] in
-            await self?.poll(targets, continuation: continuation)
+            guard let self, !targets.isEmpty else {
+                continuation.finish()
+                return
+            }
+            await QuotePoller.run(
+                interval: Self.pollInterval,
+                backoff: self.backoff,
+                continuation: continuation
+            ) {
+                try await self.snapshot(for: targets)
+            }
             continuation.finish()
         }
         continuation.onTermination = { _ in task.cancel() }
@@ -166,39 +176,5 @@ actor DexScreenerProvider: PriceProvider {
             path: "/tokens/v1/\(chain)/\(addresses.joined(separator: ","))"
         )
         return try DexParsing.pairs(fromTokens: data)
-    }
-
-    private func poll(_ instruments: [Instrument], continuation: AsyncStream<ProviderEvent>.Continuation) async {
-        guard !instruments.isEmpty else { return }
-        var wait = Self.pollInterval
-        var attempt = 0
-        var isFailing = false
-
-        while !Task.isCancelled {
-            do {
-                try await Task.sleep(for: .seconds(wait))
-            } catch {
-                return
-            }
-            do {
-                let quotes = try await snapshot(for: instruments)
-                if isFailing {
-                    continuation.yield(.status(.live))
-                    isFailing = false
-                    attempt = 0
-                }
-                for quote in quotes {
-                    continuation.yield(.quote(quote))
-                }
-                wait = Self.pollInterval
-            } catch is CancellationError {
-                return
-            } catch {
-                isFailing = true
-                continuation.yield(.status(attempt >= 2 ? .failed(error.localizedDescription) : .reconnecting))
-                wait = QuoteHub.retryDelay(for: error, attempt: attempt, backoff: backoff)
-                attempt += 1
-            }
-        }
     }
 }

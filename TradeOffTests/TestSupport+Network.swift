@@ -4,9 +4,18 @@ import Foundation
 final class RequestLog: @unchecked Sendable {
     private let lock = NSLock()
     private var storage: [URL] = []
+    private var headerStorage: [[String: String]] = []
 
     func append(_ url: URL) {
         lock.withLock { storage.append(url) }
+    }
+
+    func append(headers: [String: String]) {
+        lock.withLock { headerStorage.append(headers) }
+    }
+
+    var headers: [[String: String]] {
+        lock.withLock { headerStorage }
     }
 
     var urls: [URL] {
@@ -35,6 +44,7 @@ struct StubTransport: HTTPTransport {
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         guard let url = request.url else { throw URLError(.badURL) }
         log.append(url)
+        log.append(headers: request.allHTTPHeaderFields ?? [:])
         let result = try handler(url)
         guard let response = HTTPURLResponse(
             url: url,

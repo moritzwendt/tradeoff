@@ -15,7 +15,7 @@ enum ProviderStatus: Equatable, Sendable {
     }
 }
 
-enum ProviderEvent: Sendable {
+enum ProviderEvent: Equatable, Sendable {
     case quote(Quote)
     case status(ProviderStatus)
 }

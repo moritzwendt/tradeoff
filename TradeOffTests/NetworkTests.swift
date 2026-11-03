@@ -109,6 +109,14 @@ struct HTTPClientTests {
         #expect(await limiter.reserve() == HTTPClient.defaultPenalty)
     }
 
+    @Test func mapsRejectedCredentialsToAccessDenied() async {
+        for status in [401, 403] {
+            await #expect(throws: ProviderError.accessDenied(.binance)) {
+                _ = try await client(StubTransport(body: "", status: status)).get("https://example.test", path: "/")
+            }
+        }
+    }
+
     @Test func mapsServerErrorsToInvalidResponse() async {
         await #expect(throws: ProviderError.invalidResponse(.binance)) {
             _ = try await client(StubTransport(body: "", status: 500)).get("https://example.test", path: "/")
