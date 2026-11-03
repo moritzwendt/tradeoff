@@ -19,4 +19,19 @@ struct AppConfigTests {
     @Test func trimsValidValues() {
         #expect(AppConfig.sanitized("  abc123 ") == "abc123")
     }
+
+    @Test func keysDefaultToNil() {
+        let config = AppConfig(finnhubAPIKey: nil)
+        #expect(config.finnhubAPIKey == nil)
+        #expect(config.alpacaKeyID == nil)
+        #expect(config.alpacaSecretKey == nil)
+    }
+
+    @Test func keepsProvidedKeys() {
+        let config = AppConfig(finnhubAPIKey: "f", alpacaKeyID: "id", alpacaSecretKey: "secret")
+        #expect(config.finnhubAPIKey == "f")
+        #expect(config.alpacaKeyID == "id")
+        #expect(config.alpacaSecretKey == "secret")
+    }
 }
+

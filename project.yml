@@ -30,6 +30,8 @@ targets:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
         FinnhubAPIKey: $(FINNHUB_API_KEY)
+        AlpacaKeyID: $(ALPACA_API_KEY_ID)
+        AlpacaSecretKey: $(ALPACA_API_SECRET_KEY)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)

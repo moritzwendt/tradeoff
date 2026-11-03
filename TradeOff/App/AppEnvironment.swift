@@ -24,7 +24,8 @@ final class AppEnvironment {
         let registry = registry ?? ProviderRegistry([
             BinanceProvider(),
             DexScreenerProvider(),
-            FinnhubProvider(apiKey: config.finnhubAPIKey)
+            FinnhubProvider(apiKey: config.finnhubAPIKey),
+            AlpacaProvider(keyID: config.alpacaKeyID, secretKey: config.alpacaSecretKey)
         ])
         let hub = QuoteHub(registry: registry)
 

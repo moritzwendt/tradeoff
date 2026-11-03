@@ -4,32 +4,38 @@ import Testing
 
 actor FakeProvider: PriceProvider {
     nonisolated let id: ProviderID
-    nonisolated let capabilities = ProviderCapabilities(
-        hasRealBidAsk: true,
-        hasHistory: true,
-        hasLiquidity: false,
-        isDelayed: false,
-        requiresAPIKey: false,
-        supportedAssetClasses: [.crypto],
-        pollInterval: nil
-    )
+    nonisolated let capabilities: ProviderCapabilities
     nonisolated var availability: ProviderAvailability { .ready }
 
     private var snapshotResults: [Result<[Quote], Error>]
     private let events: [ProviderEvent]
     private let searchResult: Result<[Instrument], Error>
+    private let candles: [Candlestick]?
     private(set) var snapshotCalls = 0
+    private(set) var historyCalls = 0
 
     init(
         id: ProviderID = .binance,
-        snapshots: [Result<[Quote], Error>],
+        snapshots: [Result<[Quote], Error>] = [],
         events: [ProviderEvent] = [],
-        search: Result<[Instrument], Error> = .success([])
+        search: Result<[Instrument], Error> = .success([]),
+        assetClasses: Set<AssetClass> = [.crypto],
+        candles: [Candlestick]? = nil
     ) {
         self.id = id
+        capabilities = ProviderCapabilities(
+            hasRealBidAsk: true,
+            hasHistory: true,
+            hasLiquidity: false,
+            isDelayed: false,
+            requiresAPIKey: false,
+            supportedAssetClasses: assetClasses,
+            pollInterval: nil
+        )
         snapshotResults = snapshots
         self.events = events
         searchResult = search
+        self.candles = candles
     }
 
     func catalog() -> [Instrument] { [] }
@@ -55,7 +61,9 @@ actor FakeProvider: PriceProvider {
     }
 
     func history(for instrument: Instrument, range: ChartRange) async throws -> [Candlestick] {
-        throw ProviderError.historyUnavailable(instrument.id)
+        historyCalls += 1
+        guard let candles else { throw ProviderError.historyUnavailable(instrument.id) }
+        return candles
     }
 }
 
@@ -173,4 +181,56 @@ struct QuoteHubTests {
         #expect(registry.activeAssetClasses == [.crypto])
         #expect(AssetFilter.available(in: registry.activeAssetClasses) == [.all, .crypto])
     }
+
+    @Test func historyFallsBackToAnotherProviderForTheSameAssetClass() async throws {
+        let candle = Candlestick(time: FixedClock.epoch, open: 1, high: 2, low: 1, close: 2, volume: 3)
+        let primary = FakeProvider(id: .finnhub, assetClasses: [.stock, .etf])
+        let fallback = FakeProvider(id: .alpaca, assetClasses: [.stock, .etf], candles: [candle])
+        let hub = QuoteHub(registry: ProviderRegistry([primary, fallback]), backoff: fast)
+        let stock = TestSupport.instrument("AAPL", assetClass: .stock, provider: .finnhub)
+        let candles = try await hub.history(for: stock, range: .day)
+        #expect(candles == [candle])
+        #expect(await primary.historyCalls == 1)
+        #expect(await fallback.historyCalls == 1)
+    }
+
+    @Test func historyDoesNotUseFallbacksWhenThePrimaryWorks() async throws {
+        let candle = Candlestick(time: FixedClock.epoch, open: 1, high: 2, low: 1, close: 2, volume: 3)
+        let primary = FakeProvider(id: .finnhub, assetClasses: [.stock], candles: [candle])
+        let fallback = FakeProvider(id: .alpaca, assetClasses: [.stock], candles: [])
+        let hub = QuoteHub(registry: ProviderRegistry([primary, fallback]), backoff: fast)
+        let stock = TestSupport.instrument("AAPL", assetClass: .stock, provider: .finnhub)
+        #expect(try await hub.history(for: stock, range: .day) == [candle])
+        #expect(await fallback.historyCalls == 0)
+    }
+
+    @Test func historyKeepsThePrimaryErrorWhenNothingHasCandles() async {
+        let primary = FakeProvider(id: .finnhub, assetClasses: [.stock])
+        let fallback = FakeProvider(id: .alpaca, assetClasses: [.stock])
+        let hub = QuoteHub(registry: ProviderRegistry([primary, fallback]), backoff: fast)
+        let stock = TestSupport.instrument("AAPL", assetClass: .stock, provider: .finnhub)
+        await #expect(throws: ProviderError.historyUnavailable(stock.id)) {
+            _ = try await hub.history(for: stock, range: .day)
+        }
+    }
+
+    @Test func historyIgnoresProvidersForOtherAssetClassesAndMissingKeys() {
+        let registry = ProviderRegistry([
+            FakeProvider(id: .binance, assetClasses: [.crypto]),
+            AlpacaProvider(keyID: nil, secretKey: nil),
+            FakeProvider(id: .alpaca, assetClasses: [.stock])
+        ])
+        let stock = TestSupport.instrument("AAPL", assetClass: .stock, provider: .finnhub)
+        #expect(registry.historyFallbacks(for: stock).map(\.id) == [.alpaca])
+        let coin = TestSupport.instrument("BTC", assetClass: .crypto, provider: .binance)
+        #expect(registry.historyFallbacks(for: coin).isEmpty)
+    }
+
+    @Test func historyOnlyProvidersDoNotActivateAssetClasses() {
+        let registry = ProviderRegistry([
+            AlpacaProvider(keyID: "id", secretKey: "secret")
+        ])
+        #expect(registry.activeAssetClasses.isEmpty)
+    }
 }
+
