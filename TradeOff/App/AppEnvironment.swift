@@ -47,16 +47,33 @@ final class AppEnvironment {
 
     func prepare() async {
         _ = trading.account()
-        let key = "tradeoff.watchlist.seeded.live"
-        guard !defaults.bool(forKey: key) else { return }
-        let context = container.mainContext
-        let catalog = await hub.catalog()
-        guard !catalog.isEmpty else { return }
-        for (index, instrument) in catalog.enumerated() {
-            context.insert(WatchlistEntry(instrument: instrument, sortIndex: index))
+        await seedWatchlist()
+    }
+
+    func seedWatchlist() async {
+        let legacyKey = "tradeoff.watchlist.seeded.live"
+        let providersKey = "tradeoff.watchlist.seededProviders"
+        var seeded = Set(defaults.stringArray(forKey: providersKey) ?? [])
+        if defaults.bool(forKey: legacyKey) {
+            seeded.formUnion([ProviderID.binance.rawValue, ProviderID.dexScreener.rawValue])
         }
+
+        let context = container.mainContext
+        var nextIndex = ((try? context.fetch(FetchDescriptor<WatchlistEntry>())) ?? []).count
+        var changed = false
+        for provider in hub.registry.all where provider.availability == .ready && !seeded.contains(provider.id.rawValue) {
+            let catalog = await provider.catalog()
+            guard !catalog.isEmpty else { continue }
+            for instrument in catalog {
+                context.insert(WatchlistEntry(instrument: instrument, sortIndex: nextIndex))
+                nextIndex += 1
+            }
+            seeded.insert(provider.id.rawValue)
+            changed = true
+        }
+        guard changed else { return }
         try? context.save()
-        defaults.set(true, forKey: key)
+        defaults.set(Array(seeded).sorted(), forKey: providersKey)
     }
 
     func resetAccount() {

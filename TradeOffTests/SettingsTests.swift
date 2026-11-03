@@ -48,4 +48,25 @@ struct SettingsTests {
         settings.reset()
         #expect(settings.values == SettingsValues())
     }
+
+    @Test func marketHoursAreEnforcedByDefault() {
+        #expect(SettingsValues().ignoreMarketHours == false)
+        #expect(AppSettings(defaults: defaults()).executionModel.ignoreMarketHours == false)
+    }
+
+    @Test func legacyIgnoreMarketHoursIsResetOnce() throws {
+        let store = defaults()
+        var legacy = SettingsValues()
+        legacy.ignoreMarketHours = true
+        legacy.startingBalance = 4321
+        store.set(try JSONEncoder().encode(legacy), forKey: "tradeoff.settings.v1")
+
+        let first = AppSettings(defaults: store)
+        #expect(first.values.ignoreMarketHours == false)
+        #expect(first.values.startingBalance == 4321)
+
+        first.values.ignoreMarketHours = true
+        let second = AppSettings(defaults: store)
+        #expect(second.values.ignoreMarketHours == true)
+    }
 }

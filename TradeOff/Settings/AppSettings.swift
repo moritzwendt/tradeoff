@@ -7,6 +7,7 @@ final class AppSettings {
     @ObservationIgnored private var storage: SettingsValues
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let key = "tradeoff.settings.v1"
+    @ObservationIgnored private let marketHoursMigrationKey = "tradeoff.settings.marketHoursEnforced"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -15,6 +16,11 @@ final class AppSettings {
             storage = decoded
         } else {
             storage = SettingsValues()
+        }
+        if !defaults.bool(forKey: marketHoursMigrationKey) {
+            storage.ignoreMarketHours = false
+            defaults.set(true, forKey: marketHoursMigrationKey)
+            persist()
         }
     }
 

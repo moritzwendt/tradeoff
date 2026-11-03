@@ -18,6 +18,7 @@ struct TradingServiceTests {
         let defaults = UserDefaults(suiteName: "tradeoff.tests.\(UUID().uuidString)") ?? .standard
         let settings = AppSettings(defaults: defaults)
         settings.values.startingBalance = startingBalance
+        settings.values.ignoreMarketHours = true
         let hub = QuoteHub(registry: ProviderRegistry([]))
         let instrument = TestSupport.instrument("AAPL")
         hub.ingest(TestSupport.quote(for: instrument))

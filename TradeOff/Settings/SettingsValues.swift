@@ -3,7 +3,7 @@ import Foundation
 struct SettingsValues: Codable, Equatable, Sendable {
     var startingBalance: Decimal = 10_000
     var fees: FeeSchedule = .standard
-    var ignoreMarketHours: Bool = true
+    var ignoreMarketHours: Bool = false
     var maxQuoteAge: Double = 30
     var chartStyle: ChartStyle = .line
     var hapticsEnabled: Bool = true
