@@ -27,6 +27,7 @@ struct PortfolioScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
+                    ConnectionBanner()
                     headerCard(valuation: current, points: points)
                     tiles(valuation: current)
                     if current.positions.isEmpty {

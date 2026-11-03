@@ -86,7 +86,7 @@ enum DexScreenerCatalog {
         Instrument(
             id: Instrument.makeID(provider: .dexScreener, symbol: ref.providerSymbol),
             symbol: displaySymbol(symbol),
-            name: "\(name) (\(chainLabel(for: ref.chain)))",
+            name: name,
             assetClass: .memeCoin,
             provider: .dexScreener,
             providerSymbol: ref.providerSymbol,
@@ -102,5 +102,12 @@ enum DexScreenerCatalog {
         let trimmed = raw
             .trimmingCharacters(in: CharacterSet(charactersIn: "$").union(.whitespacesAndNewlines))
         return String(trimmed.prefix(12))
+    }
+}
+
+extension Instrument {
+    var network: String? {
+        guard provider == .dexScreener, let ref = DexTokenRef(providerSymbol: providerSymbol) else { return nil }
+        return DexScreenerCatalog.chainLabel(for: ref.chain)
     }
 }

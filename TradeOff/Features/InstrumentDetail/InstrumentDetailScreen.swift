@@ -27,6 +27,7 @@ struct InstrumentDetailScreen: View {
 
         ScrollView {
             VStack(spacing: 16) {
+                ConnectionBanner()
                 header(quote: quote, selected: selected, change: change)
                 chartCard(candles: candles, selected: selected, change: change)
                 marketCard(quote: quote)
@@ -71,7 +72,7 @@ struct InstrumentDetailScreen: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(instrument.name)
                         .font(.title3.weight(.semibold))
-                    Text(instrument.assetClass.singularTitle)
+                    Text([instrument.assetClass.singularTitle, instrument.network].compactMap { $0 }.joined(separator: " · "))
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -131,6 +132,19 @@ struct InstrumentDetailScreen: View {
                     if candles.isEmpty {
                         if model.isLoading {
                             ProgressView()
+                        } else if model.loadFailed {
+                            VStack(spacing: 12) {
+                                Image(systemName: "chart.line.uptrend.xyaxis")
+                                    .font(.largeTitle)
+                                    .foregroundStyle(Theme.textTertiary)
+                                Text("Verlauf nicht verfügbar")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Theme.textSecondary)
+                                Button("Erneut laden") {
+                                    Task { await model.load(using: hub) }
+                                }
+                                .buttonStyle(.glass)
+                            }
                         } else {
                             Image(systemName: "chart.line.uptrend.xyaxis")
                                 .font(.largeTitle)

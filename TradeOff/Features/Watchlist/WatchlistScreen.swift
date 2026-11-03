@@ -26,6 +26,7 @@ struct WatchlistScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 18) {
+                    ConnectionBanner()
                     FilterChips(items: AssetFilter.available(in: hub.registry.activeAssetClasses), selection: $filter) { $0.title }
                         .padding(.horizontal, -Theme.screenPadding)
 

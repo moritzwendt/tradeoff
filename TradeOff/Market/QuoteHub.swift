@@ -14,7 +14,7 @@ final class QuoteHub {
     @ObservationIgnored private var streams: [ProviderID: Stream] = [:]
     @ObservationIgnored private var loadingSparklines: Set<InstrumentID> = []
     @ObservationIgnored private var isPaused = false
-    @ObservationIgnored private let backoff = Backoff(base: 2, factor: 2, maximum: 30)
+    @ObservationIgnored private let backoff: Backoff
 
     private struct Pin {
         var instrument: Instrument
@@ -26,8 +26,9 @@ final class QuoteHub {
         var task: Task<Void, Never>
     }
 
-    init(registry: ProviderRegistry) {
+    init(registry: ProviderRegistry, backoff: Backoff = Backoff(base: 2, factor: 2, maximum: 30)) {
         self.registry = registry
+        self.backoff = backoff
     }
 
     var degradedProviders: [ProviderID] {

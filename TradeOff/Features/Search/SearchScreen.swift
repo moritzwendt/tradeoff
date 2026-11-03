@@ -77,7 +77,7 @@ struct SearchScreen: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(instrument.symbol)
                             .font(.headline)
-                        Text(instrument.name)
+                        Text([instrument.name, instrument.network].compactMap { $0 }.joined(separator: " · "))
                             .font(.subheadline)
                             .foregroundStyle(Theme.textSecondary)
                             .lineLimit(1)

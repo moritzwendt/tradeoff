@@ -102,11 +102,12 @@ struct DexParsingTests {
         #expect(results.allSatisfy { $0.assetClass == .memeCoin && $0.provider == .dexScreener })
     }
 
-    @Test func searchResultsCarryChainInName() throws {
+    @Test func searchResultsCarryNetwork() throws {
         let pairs = try DexParsing.pairs(fromSearch: Data(DexFixtures.search.utf8))
         let first = try #require(DexParsing.searchResults(from: pairs).first)
         #expect(first.symbol == "PEPE")
-        #expect(first.name == "Pepe (Ethereum)")
+        #expect(first.name == "Pepe")
+        #expect(first.network == "Ethereum")
         #expect(first.id == "dexScreener:ethereum:0x6982508145454Ce325dDbE47a25d4ec3d2311933")
         #expect(first.currency == "USD")
     }
@@ -144,7 +145,9 @@ struct DexParsingTests {
         #expect(instruments.count == 7)
         #expect(Set(instruments.map(\.id)).count == 7)
         #expect(instruments.allSatisfy { DexTokenRef(providerSymbol: $0.providerSymbol) != nil })
-        #expect(instruments.first { $0.symbol == "PEPE" }?.name == "Pepe (Ethereum)")
+        #expect(instruments.first { $0.symbol == "PEPE" }?.name == "Pepe")
+        #expect(instruments.first { $0.symbol == "PEPE" }?.network == "Ethereum")
+        #expect(instruments.first { $0.symbol == "BONK" }?.network == "Solana")
     }
 }
 
