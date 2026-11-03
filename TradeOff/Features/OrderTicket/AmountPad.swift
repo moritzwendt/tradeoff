@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AmountPad: View {
+    var keyHeight: CGFloat = 46
     let onKey: (PadKey) -> Void
 
     private let rows: [[PadKey]] = [
@@ -19,7 +20,7 @@ struct AmountPad: View {
                             onKey(key)
                         } label: {
                             label(for: key)
-                                .frame(maxWidth: .infinity, minHeight: 46)
+                                .frame(maxWidth: .infinity, minHeight: keyHeight)
                                 .contentShape(.rect)
                         }
                         .buttonStyle(PadButtonStyle())

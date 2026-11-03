@@ -40,6 +40,12 @@ struct OrderTicketScreen: View {
     }
 
     private var editor: some View {
+        GeometryReader { proxy in
+            editorContent(compact: proxy.size.height < 650)
+        }
+    }
+
+    private func editorContent(compact: Bool) -> some View {
         let quote = hub.quote(for: instrument.id)
         let quantity = model.resolvedQuantity(trading: trading, quote: quote)
         let evaluation = trading.evaluate(
@@ -51,20 +57,20 @@ struct OrderTicketScreen: View {
 
         return VStack(spacing: 0) {
             ScrollView {
-                VStack(spacing: 18) {
+                VStack(spacing: compact ? 10 : 18) {
                     header(quote: quote)
-                    amountDisplay(preview: evaluation.preview)
+                    amountDisplay(preview: evaluation.preview, compact: compact)
                     quickChips(cash: cash, held: held)
                     breakdown(evaluation: evaluation, cash: cash, held: held)
                 }
                 .padding(.horizontal, Theme.screenPadding)
-                .padding(.top, 24)
+                .padding(.top, compact ? 8 : 24)
                 .padding(.bottom, 12)
             }
             .scrollIndicators(.hidden)
 
             VStack(spacing: 10) {
-                AmountPad { model.press($0) }
+                AmountPad(keyHeight: compact ? 38 : 46) { model.press($0) }
                 confirmButton(evaluation: evaluation, quote: quote)
             }
             .padding(.horizontal, Theme.screenPadding)
@@ -99,7 +105,7 @@ struct OrderTicketScreen: View {
         }
     }
 
-    private func amountDisplay(preview: ExecutionPreview?) -> some View {
+    private func amountDisplay(preview: ExecutionPreview?, compact: Bool) -> some View {
         let primary: String
         let secondary: String
         switch model.mode {
@@ -113,7 +119,7 @@ struct OrderTicketScreen: View {
 
         return VStack(spacing: 6) {
             Text(primary)
-                .font(.system(size: 46, weight: .bold, design: .rounded))
+                .font(.system(size: compact ? 38 : 46, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(model.text.isEmpty ? Theme.textTertiary : Theme.textPrimary)
                 .lineLimit(1)
