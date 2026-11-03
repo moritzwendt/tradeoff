@@ -16,4 +16,12 @@ enum FinnhubFixtures {
     static let candles = #"""
 {"c":[264.1,264.5,262.2,262.9],"h":[264.3,264.7,262.6,263.1],"l":[263.8,264.0,261.9,262.1],"o":[263.9,264.1,262.0,262.3],"s":"ok","t":[1793367000,1793367300,1793629800,1793630100],"v":[120345,98213,200144,150320]}
 """#
+
+    static let liveQuote = #"""
+{"c":338.32,"d":-6.31,"dp":-1.8309,"h":343.8,"l":335.82,"o":342.67,"pc":344.63,"t":1793653200}
+"""#
+
+    static let liveSearch = #"""
+{"count":11,"result":[{"description":"Apple Inc.","displaySymbol":"AAPL","symbol":"AAPL","type":"Common Stock"},{"description":"Apple Hospitality REIT Inc","displaySymbol":"APLE","symbol":"APLE","type":"Common Stock"},{"description":"Apple Flavor & Fragrance Group Co Ltd","displaySymbol":"603020.SS","symbol":"603020.SS","type":"Common Stock"},{"description":"Maui Land & Pineapple Company Inc","displaySymbol":"MLP","symbol":"MLP","type":"Common Stock"},{"description":"Apple iSports Group Inc","displaySymbol":"AAPI","symbol":"AAPI","type":"Common Stock"},{"description":"Apple International Co Ltd","displaySymbol":"2788.T","symbol":"2788.T","type":"Common Stock"},{"description":"Pineapple Financial Inc","displaySymbol":"PAPL","symbol":"PAPL","type":"Common Stock"},{"description":"Applepark Co Ltd","displaySymbol":"164A.T","symbol":"164A.T","type":"Common Stock"},{"description":"Pineapple Resources Bhd","displaySymbol":"PINEAPP.KL","symbol":"PINEAPP.KL","type":"Common Stock"},{"description":"Pineapple Energy Inc","displaySymbol":"SUNE","symbol":"SUNE","type":"Common Stock"},{"description":"Pineapple Power Corporation PLC","displaySymbol":"PNPL.L","symbol":"PNPL.L","type":"Common Stock"}]}
+"""#
 }

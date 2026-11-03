@@ -61,3 +61,17 @@ struct StubTransport: HTTPTransport {
 enum FixedClock {
     static let epoch = Date(timeIntervalSince1970: 1_800_000_000)
 }
+
+final class ClockBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: Date
+
+    init(_ value: Date) {
+        self.value = value
+    }
+
+    var now: Date {
+        get { lock.withLock { value } }
+        set { lock.withLock { value = newValue } }
+    }
+}

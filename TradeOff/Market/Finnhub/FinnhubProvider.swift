@@ -8,6 +8,7 @@ actor FinnhubProvider: PriceProvider {
     nonisolated static let secondsPerSymbol: TimeInterval = 1.5
     nonisolated static let historyCacheLifetime: TimeInterval = 120
     nonisolated static let minimumSearchLength = 1
+    nonisolated static let deniedHistoryCooldown: TimeInterval = 3600
 
     nonisolated let id: ProviderID = .finnhub
     nonisolated let apiKey: String?
@@ -35,6 +36,7 @@ actor FinnhubProvider: PriceProvider {
     private let clock: @Sendable () -> Date
     private let backoff = Backoff(base: 2, factor: 2, maximum: 60)
     private var historyCache: [HistoryKey: (loadedAt: Date, candles: [Candlestick])] = [:]
+    private var historyDeniedUntil: Date?
 
     init(
         apiKey: String?,
@@ -154,6 +156,9 @@ actor FinnhubProvider: PriceProvider {
         if let cached = historyCache[key], now.timeIntervalSince(cached.loadedAt) < Self.historyCacheLifetime {
             return cached.candles
         }
+        if let historyDeniedUntil, now < historyDeniedUntil {
+            throw ProviderError.historyUnavailable(instrument.id)
+        }
 
         let request = FinnhubParsing.candleRequest(for: range)
         let data: Data
@@ -169,6 +174,7 @@ actor FinnhubProvider: PriceProvider {
                 ]
             )
         } catch ProviderError.accessDenied {
+            historyDeniedUntil = now.addingTimeInterval(Self.deniedHistoryCooldown)
             throw ProviderError.historyUnavailable(instrument.id)
         }
 

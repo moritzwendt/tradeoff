@@ -21,6 +21,23 @@ struct FinnhubParsingTests {
         #expect(quote.timestamp == FixedClock.epoch)
     }
 
+    @Test func recordedLiveQuoteParses() throws {
+        let raw = try FinnhubParsing.quote(Data(FinnhubFixtures.liveQuote.utf8))
+        let quote = try #require(raw.quote(instrumentID: "finnhub:AAPL", at: FixedClock.epoch))
+        #expect(quote.last == TestSupport.decimal("338.32"))
+        #expect(quote.previousClose == TestSupport.decimal("344.63"))
+        #expect(quote.dayHigh == TestSupport.decimal("343.8"))
+        #expect(quote.dayLow == TestSupport.decimal("335.82"))
+        #expect(quote.changeFraction < 0)
+    }
+
+    @Test func recordedLiveSearchDropsForeignListings() throws {
+        let results = try FinnhubParsing.searchResults(Data(FinnhubFixtures.liveSearch.utf8))
+        #expect(results.map(\.symbol) == ["AAPL", "APLE", "MLP", "AAPI", "PAPL", "SUNE"])
+        #expect(results.allSatisfy { $0.assetClass == .stock })
+        #expect(results[0].name == "Apple")
+    }
+
     @Test func unknownSymbolsYieldNoQuote() throws {
         let raw = try FinnhubParsing.quote(Data(FinnhubFixtures.unknownQuote.utf8))
         #expect(raw.quote(instrumentID: "finnhub:XXXX", at: FixedClock.epoch) == nil)
@@ -244,6 +261,27 @@ struct FinnhubProviderTests {
         await #expect(throws: ProviderError.historyUnavailable(instrument.id)) {
             _ = try await provider(transport).history(for: instrument, range: .day)
         }
+    }
+
+    @Test func deniedHistoryStopsFurtherRequestsUntilTheCooldownEnds() async throws {
+        let transport = StubTransport(body: #"{"error":"You don't have access to this resource."}"#, status: 403)
+        let clock = ClockBox(FixedClock.epoch)
+        let finnhub = FinnhubProvider(apiKey: key, transport: transport, clock: { clock.now })
+        let instrument = instruments(["AAPL"])[0]
+
+        await #expect(throws: ProviderError.historyUnavailable(instrument.id)) {
+            _ = try await finnhub.history(for: instrument, range: .day)
+        }
+        await #expect(throws: ProviderError.historyUnavailable(instrument.id)) {
+            _ = try await finnhub.history(for: instrument, range: .month)
+        }
+        #expect(transport.log.urls.count == 1)
+
+        clock.now = FixedClock.epoch.addingTimeInterval(FinnhubProvider.deniedHistoryCooldown + 1)
+        await #expect(throws: ProviderError.historyUnavailable(instrument.id)) {
+            _ = try await finnhub.history(for: instrument, range: .week)
+        }
+        #expect(transport.log.urls.count == 2)
     }
 
     @Test func emptyHistoryIsUnavailable() async {
