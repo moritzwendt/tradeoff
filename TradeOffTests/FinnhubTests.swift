@@ -109,10 +109,10 @@ struct FinnhubParsingTests {
 
     @Test func latestSessionKeepsOnlyTheLastTradingDay() throws {
         let candles = try FinnhubParsing.candles(Data(FinnhubFixtures.candles.utf8))
-        let session = FinnhubParsing.latestSession(in: candles)
+        let session = CandleSessions.latest(in: candles)
         #expect(session.count == 2)
         #expect(session.allSatisfy { $0.time >= candles[2].time })
-        #expect(FinnhubParsing.latestSession(in: []).isEmpty)
+        #expect(CandleSessions.latest(in: []).isEmpty)
     }
 
     @Test func candleRequestsMatchChartRanges() {

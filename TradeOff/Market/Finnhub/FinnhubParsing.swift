@@ -137,12 +137,4 @@ enum FinnhubParsing {
         case .max: CandleRequest(resolution: "W", lookback: 5 * 365 * 86_400)
         }
     }
-
-    static func latestSession(in candles: [Candlestick]) -> [Candlestick] {
-        guard let last = candles.last else { return [] }
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "America/New_York") ?? .gmt
-        let day = calendar.startOfDay(for: last.time)
-        return candles.filter { calendar.startOfDay(for: $0.time) == day }
-    }
 }

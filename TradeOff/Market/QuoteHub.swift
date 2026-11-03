@@ -105,10 +105,25 @@ final class QuoteHub {
     }
 
     func history(for instrument: Instrument, range: ChartRange) async throws -> [Candlestick] {
-        guard let provider = registry.provider(for: instrument.provider) else {
-            throw ProviderError.notImplemented(instrument.provider)
+        var firstError: Error?
+        if let provider = registry.provider(for: instrument.provider) {
+            do {
+                return try await provider.history(for: instrument, range: range)
+            } catch {
+                if error is CancellationError { throw error }
+                firstError = error
+            }
+        } else {
+            firstError = ProviderError.notImplemented(instrument.provider)
         }
-        return try await provider.history(for: instrument, range: range)
+        for fallback in registry.historyFallbacks(for: instrument) {
+            do {
+                return try await fallback.history(for: instrument, range: range)
+            } catch {
+                if error is CancellationError { throw error }
+            }
+        }
+        throw firstError ?? ProviderError.historyUnavailable(instrument.id)
     }
 
     func catalog() async -> [Instrument] {

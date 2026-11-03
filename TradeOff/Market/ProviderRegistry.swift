@@ -19,7 +19,16 @@ struct ProviderRegistry: Sendable {
 
     var activeAssetClasses: Set<AssetClass> {
         all
-            .filter { $0.availability == .ready }
+            .filter { $0.availability == .ready && $0.capabilities.providesQuotes }
             .reduce(into: Set<AssetClass>()) { $0.formUnion($1.capabilities.supportedAssetClasses) }
+    }
+
+    func historyFallbacks(for instrument: Instrument) -> [any PriceProvider] {
+        all.filter {
+            $0.id != instrument.provider
+                && $0.availability == .ready
+                && $0.capabilities.hasHistory
+                && $0.capabilities.supportedAssetClasses.contains(instrument.assetClass)
+        }
     }
 }

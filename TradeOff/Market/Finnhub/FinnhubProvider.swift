@@ -180,7 +180,7 @@ actor FinnhubProvider: PriceProvider {
 
         var candles = try FinnhubParsing.candles(data)
         if range == .day {
-            candles = FinnhubParsing.latestSession(in: candles)
+            candles = CandleSessions.latest(in: candles)
         }
         guard !candles.isEmpty else {
             throw ProviderError.historyUnavailable(instrument.id)

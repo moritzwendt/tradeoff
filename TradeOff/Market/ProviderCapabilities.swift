@@ -8,6 +8,7 @@ struct ProviderCapabilities: Equatable, Sendable {
     var requiresAPIKey: Bool
     var supportedAssetClasses: Set<AssetClass>
     var pollInterval: TimeInterval?
+    var providesQuotes: Bool = true
 }
 
 enum ProviderAvailability: Equatable, Sendable {
