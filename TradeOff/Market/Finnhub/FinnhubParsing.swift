@@ -41,16 +41,6 @@ struct FinnhubSearchResponse: Decodable, Sendable {
     let result: LossyArray<Item>?
 }
 
-struct FinnhubCandles: Decodable, Sendable {
-    let s: String
-    let t: [Double]?
-    let o: [Double]?
-    let h: [Double]?
-    let l: [Double]?
-    let c: [Double]?
-    let v: [Double]?
-}
-
 enum FinnhubParsing {
     static let syntheticSpread: Decimal = Decimal(string: "0.0005") ?? 0
 
@@ -86,55 +76,5 @@ enum FinnhubParsing {
             )
         }
         return Array(instruments.prefix(FinnhubCatalog.searchLimit))
-    }
-
-    static func candles(_ data: Data) throws -> [Candlestick] {
-        let response: FinnhubCandles
-        do {
-            response = try JSONDecoder().decode(FinnhubCandles.self, from: data)
-        } catch {
-            throw ProviderError.invalidResponse(.finnhub)
-        }
-        guard
-            response.s == "ok",
-            let times = response.t, let opens = response.o, let highs = response.h,
-            let lows = response.l, let closes = response.c, let volumes = response.v
-        else { return [] }
-        let count = min(times.count, opens.count, highs.count, lows.count, closes.count, volumes.count)
-        return (0..<count)
-            .compactMap { index -> Candlestick? in
-                guard
-                    let open = Decimal(apiString: String(opens[index])),
-                    let high = Decimal(apiString: String(highs[index])),
-                    let low = Decimal(apiString: String(lows[index])),
-                    let close = Decimal(apiString: String(closes[index])),
-                    let volume = Decimal(apiString: String(volumes[index]))
-                else { return nil }
-                return Candlestick(
-                    time: Date(timeIntervalSince1970: times[index]),
-                    open: open,
-                    high: high,
-                    low: low,
-                    close: close,
-                    volume: volume
-                )
-            }
-            .sorted { $0.time < $1.time }
-    }
-
-    struct CandleRequest: Equatable, Sendable {
-        let resolution: String
-        let lookback: TimeInterval
-    }
-
-    static func candleRequest(for range: ChartRange) -> CandleRequest {
-        switch range {
-        case .day: CandleRequest(resolution: "5", lookback: 5 * 86_400)
-        case .week: CandleRequest(resolution: "30", lookback: 9 * 86_400)
-        case .month: CandleRequest(resolution: "60", lookback: 30 * 86_400)
-        case .quarter: CandleRequest(resolution: "D", lookback: 90 * 86_400)
-        case .year: CandleRequest(resolution: "D", lookback: 365 * 86_400)
-        case .max: CandleRequest(resolution: "W", lookback: 5 * 365 * 86_400)
-        }
     }
 }

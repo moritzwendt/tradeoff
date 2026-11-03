@@ -26,6 +26,46 @@ struct AlpacaParsingTests {
         #expect(try AlpacaParsing.candles(Data(#"{"bars":{},"next_page_token":null}"#.utf8), symbol: "AAPL").isEmpty)
     }
 
+    @Test func recordedBarsIncludeExtendedHours() throws {
+        let candles = try AlpacaParsing.candles(Data(AlpacaFixtures.liveBars.utf8), symbol: "AAPL")
+        #expect(candles.count == 9)
+        #expect(candles.map(\.time) == candles.map(\.time).sorted())
+        #expect(candles.allSatisfy { $0.high >= $0.low && $0.volume > 0 })
+    }
+
+    @Test func regularHoursFilterDropsPreAndAfterMarketBars() throws {
+        let candles = try AlpacaParsing.candles(Data(AlpacaFixtures.liveBars.utf8), symbol: "AAPL")
+        let regular = CandleSessions.regularHours(in: candles, bucket: 300)
+        let starts = regular.map { AlpacaParsing.timestamp($0.time) }
+        #expect(starts == [
+            "2026-10-30T13:30:00Z",
+            "2026-10-30T13:35:00Z",
+            "2026-11-02T14:30:00Z",
+            "2026-11-02T14:35:00Z",
+            "2026-11-02T20:55:00Z"
+        ])
+    }
+
+    @Test func hourlyBarsOverlappingTheOpenAreKept() {
+        func bar(_ hour: Int, _ minute: Int) -> Candlestick {
+            let time = TestSupport.newYorkDate(2026, 11, 4, hour, minute)
+            return Candlestick(time: time, open: 1, high: 1, low: 1, close: 1, volume: 1)
+        }
+        let candles = [bar(8, 0), bar(9, 0), bar(10, 0), bar(15, 0), bar(16, 0)]
+        let kept = CandleSessions.regularHours(in: candles, bucket: 3_600)
+        #expect(kept.count == 3)
+        #expect(kept.first?.time == candles[1].time)
+        #expect(kept.last?.time == candles[3].time)
+    }
+
+    @Test func latestSessionKeepsOnlyTheLastTradingDay() throws {
+        let candles = try AlpacaParsing.candles(Data(AlpacaFixtures.bars.utf8), symbol: "AAPL")
+        let session = CandleSessions.latest(in: candles)
+        #expect(session.count == 2)
+        #expect(session.allSatisfy { $0.time >= candles[2].time })
+        #expect(CandleSessions.latest(in: []).isEmpty)
+    }
+
     @Test func brokenResponsesAreInvalid() {
         #expect(throws: ProviderError.invalidResponse(.alpaca)) {
             _ = try AlpacaParsing.candles(Data("[]".utf8), symbol: "AAPL")
@@ -46,7 +86,7 @@ struct AlpacaParsingTests {
     @Test func rangesMapToSupportedTimeframes() {
         #expect(AlpacaParsing.barsRequest(for: .day).timeframe == "5Min")
         #expect(AlpacaParsing.barsRequest(for: .week).timeframe == "30Min")
-        #expect(AlpacaParsing.barsRequest(for: .month).timeframe == "4Hour")
+        #expect(AlpacaParsing.barsRequest(for: .month).timeframe == "1Hour")
         #expect(AlpacaParsing.barsRequest(for: .quarter).timeframe == "1Day")
         #expect(AlpacaParsing.barsRequest(for: .year).timeframe == "1Day")
         #expect(AlpacaParsing.barsRequest(for: .max).timeframe == "1Week")
@@ -111,6 +151,32 @@ struct AlpacaProviderTests {
         #expect(headers["APCA-API-SECRET-KEY"] == secret)
         #expect(!url.absoluteString.contains(keyID))
         #expect(!url.absoluteString.contains(secret))
+    }
+
+    @Test func dayChartShowsTheLastRegularSessionEvenWithPreMarketBarsToday() async throws {
+        let transport = StubTransport(body: AlpacaFixtures.liveBars)
+        let candles = try await provider(transport).history(for: apple, range: .day)
+        #expect(candles.map { AlpacaParsing.timestamp($0.time) } == [
+            "2026-11-02T14:30:00Z",
+            "2026-11-02T14:35:00Z",
+            "2026-11-02T20:55:00Z"
+        ])
+    }
+
+    @Test func weekChartKeepsOnlyRegularHoursOfEverySession() async throws {
+        let transport = StubTransport(body: AlpacaFixtures.liveBars)
+        let candles = try await provider(transport).history(for: apple, range: .week)
+        let starts = candles.map { AlpacaParsing.timestamp($0.time) }
+        #expect(!starts.contains("2026-11-03T09:35:00Z"))
+        #expect(!starts.contains("2026-11-02T21:00:00Z"))
+        #expect(starts.contains("2026-11-02T14:30:00Z"))
+        #expect(starts.contains("2026-10-30T13:30:00Z"))
+    }
+
+    @Test func dailyAndWeeklyBarsAreNotFiltered() async throws {
+        let transport = StubTransport(body: AlpacaFixtures.liveBars)
+        let candles = try await provider(transport).history(for: apple, range: .year)
+        #expect(candles.count == 9)
     }
 
     @Test func longerRangesKeepAllBars() async throws {

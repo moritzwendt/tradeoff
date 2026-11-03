@@ -93,36 +93,6 @@ struct FinnhubParsingTests {
         #expect(items.filter { $0.assetClass == .etf }.map(\.symbol) == ["VOO", "QQQ", "SPY"])
         #expect(items.filter { $0.assetClass == .stock }.count == 5)
     }
-
-    @Test func parsesCandlesInOrder() throws {
-        let candles = try FinnhubParsing.candles(Data(FinnhubFixtures.candles.utf8))
-        #expect(candles.count == 4)
-        #expect(candles.map(\.time) == candles.map(\.time).sorted())
-        #expect(candles[0].open == TestSupport.decimal("263.9"))
-        #expect(candles[3].close == TestSupport.decimal("262.9"))
-        #expect(candles[3].volume == 150_320)
-    }
-
-    @Test func noDataMeansNoCandles() throws {
-        #expect(try FinnhubParsing.candles(Data(#"{"s":"no_data"}"#.utf8)).isEmpty)
-    }
-
-    @Test func latestSessionKeepsOnlyTheLastTradingDay() throws {
-        let candles = try FinnhubParsing.candles(Data(FinnhubFixtures.candles.utf8))
-        let session = CandleSessions.latest(in: candles)
-        #expect(session.count == 2)
-        #expect(session.allSatisfy { $0.time >= candles[2].time })
-        #expect(CandleSessions.latest(in: []).isEmpty)
-    }
-
-    @Test func candleRequestsMatchChartRanges() {
-        #expect(FinnhubParsing.candleRequest(for: .day).resolution == "5")
-        #expect(FinnhubParsing.candleRequest(for: .week).resolution == "30")
-        #expect(FinnhubParsing.candleRequest(for: .month).resolution == "60")
-        #expect(FinnhubParsing.candleRequest(for: .quarter).resolution == "D")
-        #expect(FinnhubParsing.candleRequest(for: .year).resolution == "D")
-        #expect(FinnhubParsing.candleRequest(for: .max).resolution == "W")
-    }
 }
 
 struct FinnhubProviderTests {
@@ -157,9 +127,6 @@ struct FinnhubProviderTests {
         }
         await #expect(throws: ProviderError.missingAPIKey(.finnhub)) {
             _ = try await finnhub.search(query: "apple")
-        }
-        await #expect(throws: ProviderError.missingAPIKey(.finnhub)) {
-            _ = try await finnhub.history(for: instruments(["AAPL"])[0], range: .day)
         }
         #expect(transport.log.urls.isEmpty)
     }
@@ -226,72 +193,6 @@ struct FinnhubProviderTests {
         #expect(transport.log.urls.isEmpty)
     }
 
-    @Test func historyRequestsTheRightWindowAndResolution() async throws {
-        let transport = StubTransport(body: FinnhubFixtures.candles)
-        let candles = try await provider(transport).history(for: instruments(["AAPL"])[0], range: .day)
-        #expect(candles.count == 2)
-        let url = try #require(transport.log.urls.first)
-        #expect(url.path == "/api/v1/stock/candle")
-        let query = url.query ?? ""
-        #expect(query.contains("symbol=AAPL"))
-        #expect(query.contains("resolution=5"))
-        let now = Int(FixedClock.epoch.timeIntervalSince1970)
-        #expect(query.contains("to=\(now)"))
-        #expect(query.contains("from=\(now - 5 * 86_400)"))
-    }
-
-    @Test func longerRangesKeepAllCandles() async throws {
-        let transport = StubTransport(body: FinnhubFixtures.candles)
-        let candles = try await provider(transport).history(for: instruments(["AAPL"])[0], range: .week)
-        #expect(candles.count == 4)
-    }
-
-    @Test func historyIsCached() async throws {
-        let transport = StubTransport(body: FinnhubFixtures.candles)
-        let finnhub = provider(transport)
-        let instrument = instruments(["AAPL"])[0]
-        _ = try await finnhub.history(for: instrument, range: .day)
-        _ = try await finnhub.history(for: instrument, range: .day)
-        #expect(transport.log.urls.count == 1)
-    }
-
-    @Test func historyBlockedByThePlanIsUnavailable() async {
-        let transport = StubTransport(body: #"{"error":"You don't have access to this resource."}"#, status: 403)
-        let instrument = instruments(["AAPL"])[0]
-        await #expect(throws: ProviderError.historyUnavailable(instrument.id)) {
-            _ = try await provider(transport).history(for: instrument, range: .day)
-        }
-    }
-
-    @Test func deniedHistoryStopsFurtherRequestsUntilTheCooldownEnds() async throws {
-        let transport = StubTransport(body: #"{"error":"You don't have access to this resource."}"#, status: 403)
-        let clock = ClockBox(FixedClock.epoch)
-        let finnhub = FinnhubProvider(apiKey: key, transport: transport, clock: { clock.now })
-        let instrument = instruments(["AAPL"])[0]
-
-        await #expect(throws: ProviderError.historyUnavailable(instrument.id)) {
-            _ = try await finnhub.history(for: instrument, range: .day)
-        }
-        await #expect(throws: ProviderError.historyUnavailable(instrument.id)) {
-            _ = try await finnhub.history(for: instrument, range: .month)
-        }
-        #expect(transport.log.urls.count == 1)
-
-        clock.now = FixedClock.epoch.addingTimeInterval(FinnhubProvider.deniedHistoryCooldown + 1)
-        await #expect(throws: ProviderError.historyUnavailable(instrument.id)) {
-            _ = try await finnhub.history(for: instrument, range: .week)
-        }
-        #expect(transport.log.urls.count == 2)
-    }
-
-    @Test func emptyHistoryIsUnavailable() async {
-        let transport = StubTransport(body: #"{"s":"no_data"}"#)
-        let instrument = instruments(["AAPL"])[0]
-        await #expect(throws: ProviderError.historyUnavailable(instrument.id)) {
-            _ = try await provider(transport).history(for: instrument, range: .month)
-        }
-    }
-
     @Test func pollIntervalStaysWithinTheRateLimit() {
         #expect(FinnhubProvider.pollInterval(forSymbols: 1) == 10)
         #expect(FinnhubProvider.pollInterval(forSymbols: 8) == 12)
@@ -299,4 +200,16 @@ struct FinnhubProviderTests {
         let requestsPerMinute = 8.0 * 60 / FinnhubProvider.pollInterval(forSymbols: 8)
         #expect(requestsPerMinute < Double(FinnhubProvider.requestsPerMinute))
     }
+
+    @Test func providesNoHistoryAndMakesNoRequestForIt() async {
+        let transport = StubTransport(body: "")
+        let finnhub = provider(transport)
+        let instrument = instruments(["AAPL"])[0]
+        #expect(!finnhub.capabilities.hasHistory)
+        await #expect(throws: ProviderError.historyUnavailable(instrument.id)) {
+            _ = try await finnhub.history(for: instrument, range: .day)
+        }
+        #expect(transport.log.urls.isEmpty)
+    }
 }
+

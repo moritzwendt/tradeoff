@@ -6,16 +6,14 @@ actor FinnhubProvider: PriceProvider {
     nonisolated static let requestsPerMinute = 55
     nonisolated static let minimumPollInterval: TimeInterval = 10
     nonisolated static let secondsPerSymbol: TimeInterval = 1.5
-    nonisolated static let historyCacheLifetime: TimeInterval = 120
     nonisolated static let minimumSearchLength = 1
-    nonisolated static let deniedHistoryCooldown: TimeInterval = 3600
 
     nonisolated let id: ProviderID = .finnhub
     nonisolated let apiKey: String?
 
     nonisolated let capabilities = ProviderCapabilities(
         hasRealBidAsk: false,
-        hasHistory: true,
+        hasHistory: false,
         hasLiquidity: false,
         isDelayed: false,
         requiresAPIKey: true,
@@ -27,16 +25,9 @@ actor FinnhubProvider: PriceProvider {
         apiKey == nil ? .missingAPIKey : .ready
     }
 
-    private struct HistoryKey: Hashable {
-        let symbol: String
-        let range: ChartRange
-    }
-
     private let http: HTTPClient
     private let clock: @Sendable () -> Date
     private let backoff = Backoff(base: 2, factor: 2, maximum: 60)
-    private var historyCache: [HistoryKey: (loadedAt: Date, candles: [Candlestick])] = [:]
-    private var historyDeniedUntil: Date?
 
     init(
         apiKey: String?,
@@ -147,46 +138,7 @@ actor FinnhubProvider: PriceProvider {
     }
 
     func history(for instrument: Instrument, range: ChartRange) async throws -> [Candlestick] {
-        guard instrument.provider == .finnhub else {
-            throw ProviderError.unknownInstrument(instrument.id)
-        }
-        try requireKey()
-        let key = HistoryKey(symbol: instrument.providerSymbol, range: range)
-        let now = clock()
-        if let cached = historyCache[key], now.timeIntervalSince(cached.loadedAt) < Self.historyCacheLifetime {
-            return cached.candles
-        }
-        if let historyDeniedUntil, now < historyDeniedUntil {
-            throw ProviderError.historyUnavailable(instrument.id)
-        }
-
-        let request = FinnhubParsing.candleRequest(for: range)
-        let data: Data
-        do {
-            data = try await http.get(
-                Self.restBaseURL,
-                path: "/stock/candle",
-                query: [
-                    URLQueryItem(name: "symbol", value: instrument.providerSymbol),
-                    URLQueryItem(name: "resolution", value: request.resolution),
-                    URLQueryItem(name: "from", value: String(Int(now.addingTimeInterval(-request.lookback).timeIntervalSince1970))),
-                    URLQueryItem(name: "to", value: String(Int(now.timeIntervalSince1970)))
-                ]
-            )
-        } catch ProviderError.accessDenied {
-            historyDeniedUntil = now.addingTimeInterval(Self.deniedHistoryCooldown)
-            throw ProviderError.historyUnavailable(instrument.id)
-        }
-
-        var candles = try FinnhubParsing.candles(data)
-        if range == .day {
-            candles = CandleSessions.latest(in: candles)
-        }
-        guard !candles.isEmpty else {
-            throw ProviderError.historyUnavailable(instrument.id)
-        }
-        historyCache[key] = (now, candles)
-        return candles
+        throw ProviderError.historyUnavailable(instrument.id)
     }
 
     private func requireKey() throws {

@@ -20,12 +20,13 @@ actor FakeProvider: PriceProvider {
         events: [ProviderEvent] = [],
         search: Result<[Instrument], Error> = .success([]),
         assetClasses: Set<AssetClass> = [.crypto],
-        candles: [Candlestick]? = nil
+        candles: [Candlestick]? = nil,
+        hasHistory: Bool = true
     ) {
         self.id = id
         capabilities = ProviderCapabilities(
             hasRealBidAsk: true,
-            hasHistory: true,
+            hasHistory: hasHistory,
             hasLiquidity: false,
             isDelayed: false,
             requiresAPIKey: false,
@@ -231,6 +232,25 @@ struct QuoteHubTests {
             AlpacaProvider(keyID: "id", secretKey: "secret")
         ])
         #expect(registry.activeAssetClasses.isEmpty)
+    }
+
+    @Test func historyGoesStraightToFallbacksWhenThePrimaryHasNoHistory() async throws {
+        let candle = Candlestick(time: FixedClock.epoch, open: 1, high: 2, low: 1, close: 2, volume: 3)
+        let primary = FakeProvider(id: .finnhub, assetClasses: [.stock], hasHistory: false)
+        let fallback = FakeProvider(id: .alpaca, assetClasses: [.stock], candles: [candle])
+        let hub = QuoteHub(registry: ProviderRegistry([primary, fallback]), backoff: fast)
+        let stock = TestSupport.instrument("AAPL", assetClass: .stock, provider: .finnhub)
+        #expect(try await hub.history(for: stock, range: .day) == [candle])
+        #expect(await primary.historyCalls == 0)
+    }
+
+    @Test func historyWithoutAnyHistorySourceIsUnavailable() async {
+        let primary = FakeProvider(id: .finnhub, assetClasses: [.stock], hasHistory: false)
+        let hub = QuoteHub(registry: ProviderRegistry([primary]), backoff: fast)
+        let stock = TestSupport.instrument("AAPL", assetClass: .stock, provider: .finnhub)
+        await #expect(throws: ProviderError.historyUnavailable(stock.id)) {
+            _ = try await hub.history(for: stock, range: .day)
+        }
     }
 }
 

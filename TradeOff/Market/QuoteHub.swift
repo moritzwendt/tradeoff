@@ -107,11 +107,13 @@ final class QuoteHub {
     func history(for instrument: Instrument, range: ChartRange) async throws -> [Candlestick] {
         var firstError: Error?
         if let provider = registry.provider(for: instrument.provider) {
-            do {
-                return try await provider.history(for: instrument, range: range)
-            } catch {
-                if error is CancellationError { throw error }
-                firstError = error
+            if provider.capabilities.hasHistory {
+                do {
+                    return try await provider.history(for: instrument, range: range)
+                } catch {
+                    if error is CancellationError { throw error }
+                    firstError = error
+                }
             }
         } else {
             firstError = ProviderError.notImplemented(instrument.provider)
