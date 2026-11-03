@@ -10,6 +10,7 @@ struct SearchScreen: View {
     @State private var results: [Instrument] = []
     @State private var suggestions: [Instrument] = []
     @State private var isSearching = false
+    @State private var selected: Instrument?
 
     private struct Group: Identifiable {
         let assetClass: AssetClass
@@ -48,7 +49,7 @@ struct SearchScreen: View {
             .background(AppBackground())
             .navigationTitle("Suche")
             .searchable(text: $query, prompt: "Suchen")
-            .navigationDestination(for: Instrument.self) { InstrumentDetailScreen(instrument: $0) }
+            .navigationDestination(item: $selected) { InstrumentDetailScreen(instrument: $0) }
             .task { suggestions = await hub.catalog() }
             .task(id: trimmedQuery) { await runSearch() }
         }
@@ -62,7 +63,7 @@ struct SearchScreen: View {
             } header: {
                 header("Zuletzt gesucht") {
                     Button("Leeren") { recentsText = "" }
-                        .font(.footnote.weight(.semibold))
+                        .font(Typography.labelStrong)
                         .foregroundStyle(Theme.textSecondary)
                 }
             }
@@ -118,15 +119,18 @@ struct SearchScreen: View {
     private func row(_ instrument: Instrument) -> some View {
         let isWatched = entries.contains { $0.instrumentID == instrument.id }
         return HStack(spacing: 12) {
-            NavigationLink(value: instrument) {
+            Button {
+                remember(instrument)
+                selected = instrument
+            } label: {
                 HStack(spacing: 12) {
                     AssetIcon(instrument: instrument)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(instrument.symbol)
-                            .font(.headline)
+                            .font(Typography.rowTitle)
                             .foregroundStyle(Theme.textPrimary)
                         Text([instrument.name, instrument.network].compactMap { $0 }.joined(separator: " · "))
-                            .font(.subheadline)
+                            .font(Typography.rowDetail)
                             .foregroundStyle(Theme.textSecondary)
                             .lineLimit(1)
                     }
@@ -135,19 +139,18 @@ struct SearchScreen: View {
                 .frame(minHeight: Theme.rowHeight)
                 .contentShape(.rect)
             }
-            .navigationLinkIndicatorVisibility(.hidden)
-            .simultaneousGesture(TapGesture().onEnded { remember(instrument) })
+            .buttonStyle(.borderless)
 
             Button {
                 toggle(instrument)
             } label: {
                 Image(systemName: isWatched ? "star.fill" : "star")
-                    .font(.title3)
+                    .font(Typography.section)
                     .foregroundStyle(isWatched ? Theme.textPrimary : Theme.textSecondary)
                     .frame(width: 44, height: 44)
                     .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
             .accessibilityLabel(isWatched ? "Von Watchlist entfernen" : "Zur Watchlist")
         }
         .listRowBackground(Color.clear)
