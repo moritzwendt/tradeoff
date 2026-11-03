@@ -12,7 +12,10 @@ struct SettingsScreen: View {
         NavigationStack {
             Form {
                 AccountSection(values: $settings.values) { confirmReset = true }
-                FeesSection(values: $settings.values)
+                FeesSection(
+                    values: $settings.values,
+                    classes: AssetClass.allCases.filter { hub.registry.activeAssetClasses.contains($0) }
+                )
                 TradingSection(values: $settings.values)
                 DisplaySection(values: $settings.values)
                 providersSection
@@ -93,10 +96,11 @@ private struct AccountSection: View {
 
 private struct FeesSection: View {
     @Binding var values: SettingsValues
+    let classes: [AssetClass]
 
     var body: some View {
         Section("Gebühren Anteil") {
-            ForEach(AssetClass.allCases) { assetClass in
+            ForEach(classes) { assetClass in
                 LabeledContent(assetClass.singularTitle) {
                     DecimalField(value: percentBinding(assetClass), suffix: "%", maximumFractionDigits: 3)
                 }
@@ -105,7 +109,7 @@ private struct FeesSection: View {
         .listRowBackground(Theme.fill)
 
         Section("Gebühren Pauschale") {
-            ForEach(AssetClass.allCases) { assetClass in
+            ForEach(classes) { assetClass in
                 LabeledContent(assetClass.singularTitle) {
                     DecimalField(value: flatBinding(assetClass), suffix: "$", maximumFractionDigits: 2)
                 }

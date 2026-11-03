@@ -26,7 +26,7 @@ struct WatchlistScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 18) {
-                    FilterChips(items: AssetFilter.allCases, selection: $filter) { $0.title }
+                    FilterChips(items: AssetFilter.available(in: hub.registry.activeAssetClasses), selection: $filter) { $0.title }
                         .padding(.horizontal, -Theme.screenPadding)
 
                     if entries.isEmpty {

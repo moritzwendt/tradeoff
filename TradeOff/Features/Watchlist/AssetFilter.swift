@@ -22,4 +22,11 @@ enum AssetFilter: String, CaseIterable, Identifiable, Hashable {
     var title: String {
         assetClass?.title ?? "Alle"
     }
+
+    static func available(in classes: Set<AssetClass>) -> [AssetFilter] {
+        allCases.filter { filter in
+            guard let assetClass = filter.assetClass else { return true }
+            return classes.contains(assetClass)
+        }
+    }
 }

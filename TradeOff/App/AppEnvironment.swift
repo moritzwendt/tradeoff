@@ -51,6 +51,7 @@ final class AppEnvironment {
         guard !defaults.bool(forKey: key) else { return }
         let context = container.mainContext
         let catalog = await hub.catalog()
+        guard !catalog.isEmpty else { return }
         for (index, instrument) in catalog.enumerated() {
             context.insert(WatchlistEntry(instrument: instrument, sortIndex: index))
         }
