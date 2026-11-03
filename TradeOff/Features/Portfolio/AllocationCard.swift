@@ -33,7 +33,7 @@ struct AllocationCard: View {
         Card {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Verteilung")
-                    .font(.headline)
+                    .font(Typography.rowTitle)
                 HStack(spacing: 20) {
                     Chart(items) { slice in
                         SectorMark(
@@ -53,10 +53,10 @@ struct AllocationCard: View {
                                     .fill(slice.color)
                                     .frame(width: 8, height: 8)
                                 Text(slice.label)
-                                    .font(.subheadline)
+                                    .font(Typography.rowDetail)
                                 Spacer(minLength: 4)
                                 Text(share(slice.value, of: total))
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(Typography.value)
                                     .monospacedDigit()
                                     .foregroundStyle(Theme.textSecondary)
                             }

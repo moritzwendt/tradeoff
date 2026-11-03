@@ -25,26 +25,28 @@ struct PortfolioScreen: View {
         let points = equityPoints(for: current)
 
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    headerSection(valuation: current, points: points)
-                    overview(valuation: current)
-                    if current.positions.isEmpty {
-                        ContentUnavailableView("Keine Positionen", systemImage: "chart.pie")
-                            .padding(.top, 8)
-                    } else {
-                        positionsSection(valuation: current)
-                        AllocationCard(valuation: current)
+            VStack(spacing: 0) {
+                ScreenHeader(title: "Portfolio") { TopBarActions() }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 28) {
+                        headerSection(valuation: current, points: points)
+                        overview(valuation: current)
+                        if current.positions.isEmpty {
+                            ContentUnavailableView("Keine Positionen", systemImage: "chart.pie")
+                                .padding(.top, 8)
+                        } else {
+                            positionsSection(valuation: current)
+                            AllocationCard(valuation: current)
+                        }
                     }
+                    .padding(.horizontal, Theme.screenPadding)
+                    .padding(.top, 8)
+                    .padding(.bottom, 32)
                 }
-                .padding(.horizontal, Theme.screenPadding)
-                .padding(.top, 8)
-                .padding(.bottom, 32)
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden)
             .background(AppBackground())
-            .navigationTitle("Portfolio")
-            .appTopBar()
+            .toolbar(.hidden, for: .navigationBar)
             .overlay(alignment: .bottom) {
                 ConnectionBanner()
                     .padding(.horizontal, Theme.screenPadding)
@@ -66,10 +68,10 @@ struct PortfolioScreen: View {
         return VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Gesamtwert")
-                    .font(.subheadline)
+                    .font(Typography.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
                 Text(PriceFormatter.money(displayed))
-                    .font(.system(size: 40, weight: .semibold))
+                    .font(Typography.display)
                     .monospacedDigit()
                     .foregroundStyle(Theme.textPrimary)
                     .contentTransition(.numericText(value: displayed.doubleValue))
@@ -85,7 +87,7 @@ struct PortfolioScreen: View {
                         Text(PriceFormatter.percent(fraction))
                     }
                 }
-                .font(.subheadline.weight(.medium))
+                .font(Typography.value)
                 .monospacedDigit()
                 .foregroundStyle(selectedPoint == nil ? Theme.pnl(change) : Theme.textSecondary)
                 .frame(minHeight: 22)
@@ -116,10 +118,10 @@ struct PortfolioScreen: View {
     private func stat(_ title: String, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.footnote)
+                .font(Typography.label)
                 .foregroundStyle(Theme.textSecondary)
             Text(value)
-                .font(.headline)
+                .font(Typography.rowTitle)
                 .foregroundStyle(color)
                 .monospacedDigit()
                 .contentTransition(.numericText())
@@ -152,10 +154,10 @@ struct PortfolioScreen: View {
             AssetIcon(instrument: row.holding.instrument)
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.holding.instrument.symbol)
-                    .font(.headline)
+                    .font(Typography.rowTitle)
                     .foregroundStyle(Theme.textPrimary)
                 Text("\(PriceFormatter.holding(row.holding.quantity, assetClass: row.holding.instrument.assetClass)) \(row.holding.instrument.symbol)")
-                    .font(.subheadline)
+                    .font(Typography.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()
                     .lineLimit(1)
@@ -163,12 +165,12 @@ struct PortfolioScreen: View {
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 3) {
                 Text(PriceFormatter.money(row.value))
-                    .font(.headline)
+                    .font(Typography.rowTitle)
                     .foregroundStyle(Theme.textPrimary)
                     .monospacedDigit()
                     .contentTransition(.numericText())
                 Text("\(PriceFormatter.money(row.unrealizedPnL, signed: true)) \(PriceFormatter.percent(row.unrealizedFraction))")
-                    .font(.footnote.weight(.medium))
+                    .font(Typography.labelStrong)
                     .foregroundStyle(Theme.pnl(row.unrealizedPnL))
                     .monospacedDigit()
             }

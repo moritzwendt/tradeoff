@@ -25,50 +25,52 @@ struct HistoryScreen: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if fills.isEmpty {
-                    ContentUnavailableView("Keine Trades", systemImage: "clock.arrow.circlepath")
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .padding(.top, 48)
-                } else {
-                    summary
-                        .listRowInsets(EdgeInsets(top: 4, leading: Theme.screenPadding, bottom: 12, trailing: Theme.screenPadding))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    FilterChips(items: HistoryFilter.allCases, selection: $filter) { $0.title }
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    ForEach(groups) { group in
-                        Section {
-                            ForEach(group.fills) { fill in
-                                Button {
-                                    selected = fill
-                                } label: {
-                                    FillRow(fill: fill)
+            VStack(spacing: 0) {
+                ScreenHeader(title: "Verlauf") { TopBarActions() }
+                List {
+                    if fills.isEmpty {
+                        ContentUnavailableView("Keine Trades", systemImage: "clock.arrow.circlepath")
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .padding(.top, 48)
+                    } else {
+                        summary
+                            .listRowInsets(EdgeInsets(top: 4, leading: Theme.screenPadding, bottom: 12, trailing: Theme.screenPadding))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        FilterChips(items: HistoryFilter.allCases, selection: $filter) { $0.title }
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        ForEach(groups) { group in
+                            Section {
+                                SectionHeader(title: TimeFormat.dayTitle(group.day))
+                                    .listRowInsets(EdgeInsets(top: 16, leading: Theme.screenPadding, bottom: 4, trailing: Theme.screenPadding))
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                ForEach(group.fills) { fill in
+                                    Button {
+                                        selected = fill
+                                    } label: {
+                                        FillRow(fill: fill)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparatorTint(Theme.separator)
+                                    .listRowInsets(EdgeInsets(top: 0, leading: Theme.screenPadding, bottom: 0, trailing: Theme.screenPadding))
                                 }
-                                .buttonStyle(.plain)
-                                .listRowBackground(Color.clear)
-                                .listRowSeparatorTint(Theme.separator)
-                                .listRowInsets(EdgeInsets(top: 0, leading: Theme.screenPadding, bottom: 0, trailing: Theme.screenPadding))
                             }
-                        } header: {
-                            SectionHeader(title: TimeFormat.dayTitle(group.day))
-                                .textCase(nil)
-                                .padding(.top, 8)
+                            .listSectionSeparator(.hidden)
                         }
-                        .listSectionSeparator(.hidden)
                     }
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollIndicators(.hidden)
+                .environment(\.defaultMinListHeaderHeight, 0)
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .scrollIndicators(.hidden)
             .background(AppBackground())
-            .navigationTitle("Verlauf")
-            .appTopBar()
-            .environment(\.defaultMinListHeaderHeight, 0)
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(item: $selected) { fill in
                 FillDetailSheet(fill: fill)
             }
@@ -90,10 +92,10 @@ struct HistoryScreen: View {
     private func stat(_ title: String, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.footnote)
+                .font(Typography.label)
                 .foregroundStyle(Theme.textSecondary)
             Text(value)
-                .font(.subheadline.weight(.semibold))
+                .font(Typography.value)
                 .foregroundStyle(color)
                 .monospacedDigit()
                 .lineLimit(1)
@@ -111,14 +113,14 @@ private struct FillRow: View {
             AssetIcon(instrument: fill.instrument)
             VStack(alignment: .leading, spacing: 2) {
                 Text(fill.instrument.symbol)
-                    .font(.headline)
+                    .font(Typography.rowTitle)
                     .foregroundStyle(Theme.textPrimary)
                 HStack(spacing: 6) {
                     Text(fill.side == .buy ? "Kauf" : "Verkauf")
-                        .font(.subheadline.weight(.semibold))
+                        .font(Typography.value)
                         .foregroundStyle(Theme.textPrimary)
                     Text(PriceFormatter.holding(fill.quantity, assetClass: fill.instrument.assetClass))
-                        .font(.subheadline)
+                        .font(Typography.rowDetail)
                         .foregroundStyle(Theme.textSecondary)
                         .monospacedDigit()
                         .lineLimit(1)
@@ -127,17 +129,17 @@ private struct FillRow: View {
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 3) {
                 Text(PriceFormatter.money(fill.total))
-                    .font(.headline)
+                    .font(Typography.rowTitle)
                     .foregroundStyle(Theme.textPrimary)
                     .monospacedDigit()
                 if fill.side == .sell {
                     Text(PriceFormatter.money(fill.realizedPnL, signed: true))
-                        .font(.footnote.weight(.medium))
+                        .font(Typography.labelStrong)
                         .foregroundStyle(Theme.pnl(fill.realizedPnL))
                         .monospacedDigit()
                 } else {
                     Text(TimeFormat.clock(fill.timestamp))
-                        .font(.footnote)
+                        .font(Typography.label)
                         .foregroundStyle(Theme.textTertiary)
                 }
             }

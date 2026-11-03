@@ -12,9 +12,9 @@ struct FillDetailSheet: View {
                         AssetIcon(instrument: fill.instrument, size: 48)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(fill.instrument.name)
-                                .font(.title3.weight(.semibold))
+                                .font(Typography.section)
                             Text("\(fill.side.pastTitle) \(fill.instrument.symbol)")
-                                .font(.subheadline.weight(.semibold))
+                                .font(Typography.value)
                                 .foregroundStyle(Theme.textSecondary)
                         }
                     }
