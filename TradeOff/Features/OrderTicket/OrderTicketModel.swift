@@ -34,6 +34,7 @@ final class OrderTicketModel {
 
     enum Phase: Equatable {
         case editing
+        case reviewing
         case filled(Receipt)
     }
 
@@ -76,6 +77,16 @@ final class OrderTicketModel {
         guard isValid(next) else { return }
         text = next
         errorMessage = nil
+    }
+
+    func review() {
+        errorMessage = nil
+        phase = .reviewing
+    }
+
+    func backToEditing() {
+        errorMessage = nil
+        phase = .editing
     }
 
     func switchSide(to newSide: OrderSide) {

@@ -20,7 +20,7 @@ struct AmountPad: View {
                             onKey(key)
                         } label: {
                             label(for: key)
-                                .frame(maxWidth: .infinity, minHeight: keyHeight)
+                                .frame(maxWidth: .infinity, minHeight: keyHeight, maxHeight: keyHeight)
                                 .contentShape(.rect)
                         }
                         .buttonStyle(PadButtonStyle())
