@@ -3,6 +3,7 @@ import SwiftUI
 struct WatchlistRow: View {
     let instrument: Instrument
     @Environment(QuoteHub.self) private var hub
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         let quote = hub.quote(for: instrument.id)
@@ -13,20 +14,23 @@ struct WatchlistRow: View {
             AssetIcon(instrument: instrument)
             VStack(alignment: .leading, spacing: 2) {
                 Text(instrument.symbol)
-                    .font(.headline)
+                    .font(Typography.rowTitle)
                     .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
                 Text(instrument.name)
-                    .font(.subheadline)
+                    .font(Typography.rowDetail)
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            sparkline(values: values, color: trend == Theme.textSecondary ? Theme.textSecondary : trend)
-                .frame(width: 56, height: 28)
+            if !typeSize.isAccessibilitySize {
+                sparkline(values: values, color: trend == Theme.textSecondary ? Theme.textSecondary : trend)
+                    .frame(width: 56, height: 28)
+            }
             priceColumn(quote: quote)
-                .frame(width: 92, alignment: .trailing)
         }
         .frame(minHeight: Theme.rowHeight)
+        .padding(.vertical, typeSize.isAccessibilitySize ? 12 : 0)
         .contentShape(.rect)
         .task { await hub.loadSparkline(for: instrument) }
         .accessibilityElement(children: .combine)
@@ -39,25 +43,32 @@ struct WatchlistRow: View {
                 Sparkline(values: values, color: color)
                     .transition(.opacity)
             } else {
-                SkeletonBar(width: 56, height: 18)
+                Capsule()
+                    .fill(Theme.surfaceRaised)
+                    .frame(height: 2)
+                    .shimmering()
                     .transition(.opacity)
             }
         }
         .animation(.easeOut(duration: 0.3), value: values.count > 1)
     }
 
-    @ViewBuilder
     private func priceColumn(quote: Quote?) -> some View {
-        VStack(alignment: .trailing, spacing: 4) {
+        VStack(alignment: .trailing, spacing: 2) {
             if let quote {
-                PriceText(value: quote.last, font: .headline)
+                PriceText(value: quote.last, font: Typography.rowTitle)
                     .foregroundStyle(Theme.textPrimary)
-                ChangeText(fraction: quote.changeFraction)
+                ChangeText(fraction: quote.changeFraction, font: Typography.rowDetail)
             } else {
-                SkeletonBar(width: 70, height: 16)
-                SkeletonBar(width: 48, height: 12)
+                Text("000,00 $")
+                    .font(Typography.rowTitle)
+                    .placeholder(true)
+                Text("+0,00 %")
+                    .font(Typography.rowDetail)
+                    .placeholder(true)
             }
         }
+        .fixedSize(horizontal: true, vertical: false)
         .animation(.easeOut(duration: 0.25), value: quote == nil)
     }
 
