@@ -44,6 +44,12 @@ final class AppEnvironment {
 
     static func live() -> AppEnvironment {
         do {
+            #if DEBUG
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("-uitest") {
+                return try AppEnvironment.uiTesting(arguments: arguments)
+            }
+            #endif
             return try AppEnvironment()
         } catch {
             fatalError("App environment could not be created: \(error)")

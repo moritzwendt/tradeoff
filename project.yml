@@ -50,18 +50,31 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).tests
+  TradeOffUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: TradeOffUITests
+    dependencies:
+      - target: TradeOff
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).uitests
 schemes:
   TradeOff:
     build:
       targets:
         TradeOff: all
         TradeOffTests: [test]
+        TradeOffUITests: [test]
     run:
       config: Debug
     test:
       config: Debug
       targets:
         - TradeOffTests
+        - TradeOffUITests
     profile:
       config: Release
     archive:
